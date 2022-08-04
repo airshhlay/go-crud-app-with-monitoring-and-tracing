@@ -21,10 +21,10 @@ message SignupRes {
 message LoginReq {
   string username = 1;
   string password = 2;
-  int64 userId = 3;
 }
 
 message LoginRes {
   int32 errorCode = 1;
   string errorMsg = 2;
+  int64 userId = 3;
 }

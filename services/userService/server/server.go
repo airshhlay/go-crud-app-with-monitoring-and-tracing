@@ -74,20 +74,18 @@ func (s *Server) Signup(ctx context.Context, req *pb.SignupReq) (*pb.SignupRes, 
 func (s *Server) Login(ctx context.Context, req *pb.LoginReq) (*pb.LoginRes, error) {
 	var errorCode int32
 	var errorMsg string
+	var userId int64
 
 	// check if a user with the given username exists
-	exists, error := s.handler.CheckUserExists(req.Username)
+	userId, error := s.handler.VerifyLogin(req.Username, req.Password)
 	if error.errorCode != 0 {
 		errorCode = error.errorCode
 		errorMsg = error.errorMsg
 	}
 
-	// if the user does not exist, insert user into database
-	if exists {
-		s.handler.CreateNewUser(req.Username, req.Password)
-	}
 	return &pb.LoginRes{
 		ErrorCode: errorCode,
 		ErrorMsg:  errorMsg,
+		UserId:    userId,
 	}, nil
 }

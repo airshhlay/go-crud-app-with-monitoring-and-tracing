@@ -2,6 +2,7 @@ package server
 
 import (
 	"database/sql"
+	"entry-task/services/userService/constants"
 	"fmt"
 	"userService/config"
 	"userService/constants"
@@ -52,7 +53,7 @@ func (h *Handler) retrieveUserByUsername(username string) (db.User, error) {
 
 	if err != nil {
 		h.logger.Error(
-			"Error occured when querying database for user",
+			constants.ERROR_DATABASE_QUERY_MSG,
 			zap.String("query", query),
 			zap.Error(err),
 		)
@@ -66,12 +67,11 @@ func (h *Handler) CreateNewUser(username string, password string) (int64, Error)
 	hash, err := h.getPasswordHash(password)
 	if err != nil {
 		h.logger.Error(
-			"Error occured when encrypting password",
+			constants.ERROR_PASSWORD_ENCRYPTION_MSG,
 			zap.Error(err),
 		)
 		return 0, Error{
 			errorCode: constants.ERROR_PASSWORD_ENCRYPTION,
-			errorMsg:  constants.ERROR_PASSWORD_ENCRYPTION_MSG,
 		}
 	}
 	query := fmt.Sprintf("INSERT INTO users(username, password) VALUES (%s, %b)", username, hash)
@@ -79,17 +79,16 @@ func (h *Handler) CreateNewUser(username string, password string) (int64, Error)
 	if err != nil {
 		// error occured when inserting user into database
 		h.logger.Error(
-			"Error occured when inserting user into database",
+			constants.ERROR_DATABASE_INSERT_MSG,
 			zap.Error(err),
 		)
 		return 0, Error{
-			errorCode: constants.ERROR_DATABASE,
-			errorMsg:  constants.ERROR_DATABASE_MSG,
+			errorCode: constants.ERROR_DATABASE_INSERT,
 		}
 	}
 
 	h.logger.Info(
-		"User successfully added to database",
+		constants.INFO_USER_ADD_SUCCESS,
 		zap.String("username", username),
 		zap.Int64("id", id),
 	)
@@ -104,18 +103,16 @@ func (h *Handler) VerifyLogin(username string, password string) (int64, Error) {
 		if err == sql.ErrNoRows {
 			// user does not exist
 			h.logger.Info(
-				"User does not exist",
+				constants.ERROR_USER_DOES_NOT_EXIST_MSG,
 				zap.String("username", username),
 			)
 			return 0, Error{
 				errorCode: constants.ERROR_USER_DOES_NOT_EXIST,
-				errorMsg:  constants.ERROR_USER_DOES_NOT_EXIST_MSG,
 			}
 		}
 		// unexpected error occured when querying database
 		return 0, Error{
-			errorCode: constants.ERROR_DATABASE,
-			errorMsg:  constants.ERROR_DATABASE_MSG,
+			errorCode: constants.ERROR_DATABASE_QUERY,
 		}
 	}
 
@@ -124,12 +121,11 @@ func (h *Handler) VerifyLogin(username string, password string) (int64, Error) {
 	if err != nil {
 		// encryption error
 		h.logger.Error(
-			"Encryption error",
+			constants.ERROR_PASSWORD_ENCRYPTION_MSG,
 			zap.Error(err),
 		)
 		return 0, Error{
 			errorCode: constants.ERROR_PASSWORD_ENCRYPTION,
-			errorMsg:  constants.ERROR_PASSWORD_ENCRYPTION_MSG,
 		}
 	}
 
@@ -138,13 +134,12 @@ func (h *Handler) VerifyLogin(username string, password string) (int64, Error) {
 	if err != nil {
 		// user password error
 		h.logger.Info(
-			"User attempted login with password mismatch",
+			constants.ERROR_USER_PASSWORD_MSG,
 			zap.String("username", username),
 			zap.Error(err),
 		)
 		return 0, Error{
 			errorCode: constants.ERROR_USER_PASSWORD,
-			errorMsg:  constants.ERROR_USER_PASSWORD_MSG,
 		}
 	}
 
