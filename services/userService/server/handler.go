@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"userService/config"
-	"userService/constants"
-	"userService/db"
+	constants "userService/constants"
+	db "userService/db"
 
 	"go.uber.org/zap"
 
@@ -28,51 +28,27 @@ type Error struct {
 	errorMsg  string
 }
 
-// Called by the server during user login/signup.
-// Checks if the user exists.
-// Returns true if the user exists, and false otherwise.
-func (h *Handler) CheckUserExists(username string) (bool, Error) {
-	_, query, err := h.retrieveUserByUsername(username)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			h.logger.Info(
-				"User does not exist, able to create account",
-				zap.String("username", username),
-			)
-			return false, Error{}
-		}
-		h.logger.Error(
-			constants.ERROR_DATABASE_QUERY_MSG,
-			zap.String("query", query),
-			zap.Error(err),
-		)
-		return false, Error{
-			errorCode: constants.ERROR_DATABASE,
-			errorMsg:  constants.ERROR_DATABASE_MSG,
-		}
-	}
-	return true, Error{}
-}
-
-// Retrieves users from the database based on username.
-// Returns the user if succesful, else returns an error.
-// Also returns the query used for logging purposes.
-func (h *Handler) retrieveUserByUsername(username string) (db.User, string, error) {
-	var user db.User
-
-	query := fmt.Sprintf("SELECT * FROM users WHERE username='%s'", username)
-	res := h.dbManager.QueryOne(query)
-	err := res.Scan(&user.UserId, &user.Username, &user.Password)
-
-	return user, query, err
-}
-
 // Called by the server to create a new user.
 // First encrypts the user's given password, and inserts the new row into the database.
 // If successful, returns the userId.
 // Else, returns an error.
 func (h *Handler) CreateNewUser(username string, password string) (int64, Error) {
+	exists, _, err := h.checkUserExists(username)
+	if err != nil {
+		// error occured when querying database
+		return 0, Error{
+			errorCode: constants.ERROR_DATABASE_QUERY,
+			errorMsg:  constants.ERROR_DATABASE_QUERY_MSG,
+		}
+	}
+
+	// user already exists, return error
+	if exists {
+		return 0, Error{
+			errorCode: constants.ERROR_USER_ALREADY_EXISTS,
+		}
+	}
+
 	// encrypt the password
 	hash, err := h.getPasswordHash(password)
 	if err != nil {
@@ -85,6 +61,7 @@ func (h *Handler) CreateNewUser(username string, password string) (int64, Error)
 		}
 	}
 
+	// insert user into database
 	query := fmt.Sprintf("INSERT INTO users(username, password) VALUES ('%s', '%s')", username, hash)
 	id, err := h.dbManager.InsertRow(query)
 	if err != nil {
@@ -118,26 +95,19 @@ func (h *Handler) CreateNewUser(username string, password string) (int64, Error)
 // Else, returns an error.
 func (h *Handler) VerifyLogin(username string, password string) (int64, Error) {
 	// retrieve the user
-	user, query, err := h.retrieveUserByUsername(username)
+	exists, user, err := h.checkUserExists(username)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			// user does not exist
-			h.logger.Info(
-				constants.ERROR_USER_DOES_NOT_EXIST_MSG,
-				zap.String("username", username),
-			)
-			return 0, Error{
-				errorCode: constants.ERROR_USER_DOES_NOT_EXIST,
-			}
-		}
-		// unexpected error occured when querying database
-		h.logger.Error(
-			constants.ERROR_DATABASE_QUERY_MSG,
-			zap.String("query", query),
-			zap.Error(err),
-		)
+		// error occured when querying database
 		return 0, Error{
 			errorCode: constants.ERROR_DATABASE_QUERY,
+			errorMsg:  constants.ERROR_DATABASE_QUERY_MSG,
+		}
+	}
+
+	// user does not exist, return error
+	if !exists {
+		return 0, Error{
+			errorCode: constants.ERROR_USER_DOES_NOT_EXIST,
 		}
 	}
 
@@ -164,6 +134,50 @@ func (h *Handler) VerifyLogin(username string, password string) (int64, Error) {
 
 	// return userId
 	return user.UserId, Error{}
+}
+
+// Called by the server during user login/signup.
+// Checks if the user exists.
+// Returns true if the user exists, and false otherwise.
+func (h *Handler) checkUserExists(username string) (bool, db.User, error) {
+	user, query, err := h.retrieveUserByUsername(username)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// query returned no results
+			h.logger.Info(
+				constants.INFO_USER_DOES_NOT_EXIST,
+				zap.String("username", username),
+			)
+			return false, db.User{}, nil
+		}
+		// other unexpected error occurred
+		h.logger.Error(
+			constants.ERROR_DATABASE_QUERY_MSG,
+			zap.String("query", query),
+			zap.Error(err),
+		)
+		return false, db.User{}, err
+	}
+	h.logger.Info(
+		constants.INFO_USER_EXISTS,
+		zap.String("username", username),
+		zap.Int64("userId", user.UserId),
+	)
+	return true, user, nil
+}
+
+// Retrieves users from the database based on username.
+// Returns the user if succesful, else returns an error.
+// Also returns the query used for logging purposes.
+func (h *Handler) retrieveUserByUsername(username string) (db.User, string, error) {
+	var user db.User
+
+	query := fmt.Sprintf("SELECT * FROM users WHERE username='%s'", username)
+	res := h.dbManager.QueryOne(query)
+	err := res.Scan(&user.UserId, &user.Username, &user.Password)
+
+	return user, query, err
 }
 
 // Uses the bcrypt package to generate a hash from the plaintext password.
