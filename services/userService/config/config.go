@@ -19,7 +19,7 @@ type DbConfig struct {
 	Port     string `mapstructure:port`
 	User     string `mapstructure:user`
 	Net      string `mapstructure:net`
-	DbName   string `mapstructure:db_name`
+	DbName   string `mapstructure:dbName`
 	Password string `mapstructure:password`
 }
 

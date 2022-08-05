@@ -1,5 +1,6 @@
 package constants
 
 const (
-	INFO_USER_ADD_SUCCESS = "user_add_success"
+	INFO_USER_ADD_MSG   = "info_user_added"
+	INFO_USER_LOGIN_MSG = "info_user_login"
 )

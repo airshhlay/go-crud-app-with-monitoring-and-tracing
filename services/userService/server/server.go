@@ -59,7 +59,7 @@ func (s *Server) Signup(ctx context.Context, req *pb.SignupReq) (*pb.SignupRes, 
 	}
 
 	// if the user does not exist, insert user into database
-	if exists {
+	if !exists {
 		_, error = s.handler.CreateNewUser(req.Username, req.Password)
 		if error.errorCode != 0 {
 			return &pb.SignupRes{
