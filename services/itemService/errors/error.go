@@ -16,7 +16,3 @@ func (err Error) Error() string {
 	}
 	return err.ErrorMsg
 }
-
-func (err Error) GetCode() int32 {
-	return err.ErrorCode
-}

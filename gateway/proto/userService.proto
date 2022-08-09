@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+option go_package = "userService/proto";
+package proto;
+
+service UserService {
+  rpc Signup(SignupReq) returns (SignupRes){}
+  rpc Login(LoginReq) returns (LoginRes){}
+}
+
+message SignupReq {
+  string username = 1;
+  string password = 2;
+}
+
+message SignupRes {
+  int32 errorCode =  1;
+  string errorMsg =  2;
+}
+
+message LoginReq {
+  string username = 1;
+  string password = 2;
+}
+
+message LoginRes {
+  int32 errorCode = 1;
+  string errorMsg = 2;
+  int64 userId = 3;
+}
