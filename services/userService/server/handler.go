@@ -6,6 +6,7 @@ import (
 	"userService/config"
 	constants "userService/constants"
 	db "userService/db"
+	customErr "userService/errors"
 
 	"go.uber.org/zap"
 
@@ -20,32 +21,24 @@ type Handler struct {
 	logger    *zap.Logger
 }
 
-// Error is a custom struct for errors returned by the service.
-// errorCode identifies the type of error that occured.
-// errorMsg gives a brief description of the error.
-type Error struct {
-	errorCode int32
-	errorMsg  string
-}
-
 // Called by the server to create a new user.
 // First encrypts the user's given password, and inserts the new row into the database.
 // If successful, returns the userId.
 // Else, returns an error.
-func (h *Handler) CreateNewUser(username string, password string) (int64, Error) {
+func (h *Handler) CreateNewUser(username string, password string) (int64, error) {
 	exists, _, err := h.checkUserExists(username)
 	if err != nil {
 		// error occured when querying database
-		return 0, Error{
-			errorCode: constants.ERROR_DATABASE_QUERY,
-			errorMsg:  constants.ERROR_DATABASE_QUERY_MSG,
+		return 0, customErr.Error{
+			ErrorCode: constants.ERROR_DATABASE_QUERY,
+			ErrorMsg:  constants.ERROR_DATABASE_QUERY_MSG,
 		}
 	}
 
 	// user already exists, return error
 	if exists {
-		return 0, Error{
-			errorCode: constants.ERROR_USER_ALREADY_EXISTS,
+		return 0, customErr.Error{
+			ErrorCode: constants.ERROR_USER_ALREADY_EXISTS,
 		}
 	}
 
@@ -56,8 +49,8 @@ func (h *Handler) CreateNewUser(username string, password string) (int64, Error)
 			constants.ERROR_PASSWORD_ENCRYPTION_MSG,
 			zap.Error(err),
 		)
-		return 0, Error{
-			errorCode: constants.ERROR_PASSWORD_ENCRYPTION,
+		return 0, customErr.Error{
+			ErrorCode: constants.ERROR_PASSWORD_ENCRYPTION,
 		}
 	}
 
@@ -72,8 +65,8 @@ func (h *Handler) CreateNewUser(username string, password string) (int64, Error)
 			zap.String("query", query),
 			zap.Error(err),
 		)
-		return 0, Error{
-			errorCode: constants.ERROR_DATABASE_INSERT,
+		return 0, customErr.Error{
+			ErrorCode: constants.ERROR_DATABASE_INSERT,
 		}
 	}
 
@@ -83,7 +76,7 @@ func (h *Handler) CreateNewUser(username string, password string) (int64, Error)
 		zap.Int64("id", id),
 	)
 
-	return id, Error{}
+	return id, nil
 }
 
 // Called by the server when it receives a login request.
@@ -93,21 +86,21 @@ func (h *Handler) CreateNewUser(username string, password string) (int64, Error)
 // Verifies the user's given password gainst the hash in the database,
 // and returns the userId if passwords match.
 // Else, returns an error.
-func (h *Handler) VerifyLogin(username string, password string) (int64, Error) {
+func (h *Handler) VerifyLogin(username string, password string) (int64, error) {
 	// retrieve the user
 	exists, user, err := h.checkUserExists(username)
 	if err != nil {
 		// error occured when querying database
-		return 0, Error{
-			errorCode: constants.ERROR_DATABASE_QUERY,
-			errorMsg:  constants.ERROR_DATABASE_QUERY_MSG,
+		return 0, customErr.Error{
+			ErrorCode: constants.ERROR_DATABASE_QUERY,
+			ErrorMsg:  constants.ERROR_DATABASE_QUERY_MSG,
 		}
 	}
 
 	// user does not exist, return error
 	if !exists {
-		return 0, Error{
-			errorCode: constants.ERROR_USER_DOES_NOT_EXIST,
+		return 0, customErr.Error{
+			ErrorCode: constants.ERROR_USER_DOES_NOT_EXIST,
 		}
 	}
 
@@ -120,8 +113,8 @@ func (h *Handler) VerifyLogin(username string, password string) (int64, Error) {
 			zap.String("username", username),
 			zap.Error(err),
 		)
-		return 0, Error{
-			errorCode: constants.ERROR_USER_PASSWORD,
+		return 0, customErr.Error{
+			ErrorCode: constants.ERROR_USER_PASSWORD,
 		}
 	}
 
@@ -133,7 +126,7 @@ func (h *Handler) VerifyLogin(username string, password string) (int64, Error) {
 	)
 
 	// return userId
-	return user.UserId, Error{}
+	return user.UserId, nil
 }
 
 // Called by the server during user login/signup.

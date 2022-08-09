@@ -7,6 +7,7 @@ import (
 	"userService/config"
 	constants "userService/constants"
 	"userService/db"
+	customErr "userService/errors"
 	pb "userService/proto"
 
 	"go.uber.org/zap"
@@ -64,28 +65,51 @@ func (s *Server) Signup(ctx context.Context, req *pb.SignupReq) (*pb.SignupRes, 
 	// check if a user with the given username exists
 
 	// user does not exist, insert into database
-	_, error := s.handler.CreateNewUser(req.Username, req.Password)
+	_, err := s.handler.CreateNewUser(req.Username, req.Password)
+	if err != nil {
+		v, ok := err.(*customErr.Error)
+		if !ok {
+			s.logger.Error(
+				constants.ERROR_TYPECAST_MSG,
+				zap.Error(err),
+			)
+			return &pb.SignupRes{
+				ErrorCode: constants.ERROR_TYPECAST,
+			}, nil
+		}
+		return &pb.SignupRes{
+			ErrorCode: v.ErrorCode,
+		}, nil
+	}
+
 	return &pb.SignupRes{
-		ErrorCode: error.errorCode,
-		ErrorMsg:  error.errorMsg,
+		ErrorCode: -1,
 	}, nil
 }
 
 func (s *Server) Login(ctx context.Context, req *pb.LoginReq) (*pb.LoginRes, error) {
-	var errorCode int32
-	var errorMsg string
 	var userId int64
 
 	// check if a user with the given username exists
-	userId, error := s.handler.VerifyLogin(req.Username, req.Password)
-	if error.errorCode != 0 {
-		errorCode = error.errorCode
-		errorMsg = error.errorMsg
+	userId, err := s.handler.VerifyLogin(req.Username, req.Password)
+	if err != nil {
+		v, ok := err.(*customErr.Error)
+		if !ok {
+			s.logger.Error(
+				constants.ERROR_TYPECAST_MSG,
+				zap.Error(err),
+			)
+			return &pb.LoginRes{
+				ErrorCode: constants.ERROR_TYPECAST,
+			}, nil
+		}
+		return &pb.LoginRes{
+			ErrorCode: v.ErrorCode,
+		}, nil
 	}
 
 	return &pb.LoginRes{
-		ErrorCode: errorCode,
-		ErrorMsg:  errorMsg,
+		ErrorCode: -1,
 		UserId:    userId,
 	}, nil
 }
