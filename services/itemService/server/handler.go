@@ -12,6 +12,8 @@ import (
 	util "itemService/util"
 	"time"
 
+	errGroup "golang.org/x/sync/errgroup"
+
 	"go.uber.org/zap"
 )
 
@@ -64,7 +66,6 @@ func (h *Handler) AddItemToUserFavList(itemId int64, shopId int64, userId int64)
 		zap.Int64("shopId", shopId),
 	)
 
-	// TODO: use goroutine
 	// checks the cache for the item, else makes an external api call to fetch the item information
 	item, err := h.getItem(itemId, shopId)
 	if err != nil {
@@ -87,15 +88,27 @@ func (h *Handler) GetUserFavourites(userId int64, page int32) ([]*pb.Item, int32
 	}
 
 	// list of items to return to the user
-	var items []*pb.Item
+	var items = make([]*pb.Item, len(favourites))
 
-	// TODO: use goroutines
-	for _, fav := range favourites {
-		item, err := h.getItem(fav.ItemId, fav.ShopId)
-		if err != nil {
-			return items, 0, err
-		}
-		items = append(items, item)
+	// fetch items concurrently
+	g := new(errGroup.Group)
+
+	for i, fav := range favourites {
+		fav := fav
+		items := items
+		i := i
+		g.Go(
+			func() error {
+				fmt.Println(fav.ItemId)
+				item, err := h.getItem(fav.ItemId, fav.ShopId)
+				items[i] = item
+				return err
+			})
+	}
+	// wait
+	err = g.Wait()
+	if err != nil {
+		return items, 0, err
 	}
 
 	// get total pages
