@@ -56,11 +56,39 @@ func (i *ItemServiceController) AddFavHandler(c *gin.Context) {
 		zap.Any("request", addFavReq),
 	)
 
+	itemId, err := strconv.ParseInt(addFavReq.ItemId, 10, 64)
+	if err != nil {
+		i.logger.Error(
+			"error_type_conversion",
+			zap.String("itemId", addFavReq.ItemId),
+			zap.Error(err),
+		)
+		c.JSON(200, gin.H{
+			"errorCode": 400,
+			"errorMsg":  "invalid_request",
+		})
+		return
+	}
+
+	shopId, err := strconv.ParseInt(addFavReq.ShopId, 10, 64)
+	if err != nil {
+		i.logger.Error(
+			"error_type_conversion",
+			zap.String("shopId", addFavReq.ShopId),
+			zap.Error(err),
+		)
+		c.JSON(200, gin.H{
+			"errorCode": 400,
+			"errorMsg":  "invalid_request",
+		})
+		return
+	}
+
 	clientAddFavReq := &proto.AddFavReq{
 		UserId: userId,
 		// UserId: 1,
-		ItemId: addFavReq.ItemId,
-		ShopId: addFavReq.ShopId,
+		ItemId: itemId,
+		ShopId: shopId,
 	}
 
 	clientAddFavRes, err := i.client.AddFav(c, clientAddFavReq)
@@ -161,5 +189,10 @@ func (i *ItemServiceController) getUserId(c *gin.Context) int64 {
 		return 0
 	}
 
-	return userIdRaw.(int64)
+	userId, err := strconv.ParseInt(userIdRaw.(string), 10, 64)
+	if err != nil {
+		i.logger.Error("error_parse_int", zap.Error(err))
+		return 0
+	}
+	return userId
 }

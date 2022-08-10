@@ -15,6 +15,8 @@ type Config struct {
 }
 
 func LoadConfig(logger *zap.Logger) (*Config, error) {
+	viper.AddConfigPath("/app/gateway/config")
+	viper.AddConfigPath("/app/config")
 	viper.AddConfigPath("./config")
 	viper.SetConfigType("yaml")
 	viper.SetConfigName("config")

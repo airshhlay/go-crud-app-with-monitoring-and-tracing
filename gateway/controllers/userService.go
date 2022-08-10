@@ -58,7 +58,7 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 	}
 	u.logger.Info(
 		"info_request",
-		zap.Any("request", loginReq),
+		zap.Any("username", loginReq.Username),
 	)
 
 	clientLoginReq := &proto.LoginReq{
@@ -73,7 +73,8 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 		c.JSON(500, "server_error")
 		return
 	}
-	if clientLoginRes.ErrorCode != 0 {
+	if clientLoginRes.ErrorCode != -1 {
+		// remove any credentials if there is a login error
 		u.removeCookie(c, token)
 	}
 
@@ -95,6 +96,7 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 					Value:    tokenString,
 					Expires:  expirationTime,
 					HttpOnly: true,
+					Path:     "/",
 				},
 			)
 		}
@@ -104,6 +106,10 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 		ErrorCode: clientLoginRes.ErrorCode,
 		ErrorMsg:  clientLoginRes.ErrorMsg,
 	}
+	u.logger.Info(
+		"response",
+		zap.Any("res", clientLoginRes),
+	)
 	c.IndentedJSON(200, loginRes)
 }
 

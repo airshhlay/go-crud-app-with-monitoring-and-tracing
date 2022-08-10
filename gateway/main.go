@@ -4,6 +4,7 @@ import (
 	"fmt"
 	client "gateway/client"
 	controllers "gateway/controllers"
+	"gateway/middleware"
 	routes "gateway/routes"
 
 	"google.golang.org/grpc/credentials/insecure"
@@ -45,11 +46,13 @@ func StartHttpServer(logger *zap.Logger, config *config.Config, clients *GrpcCli
 	}
 
 	server := gin.Default()
-	server.SetTrustedProxies([]string{"localhost"})
+	server.SetTrustedProxies([]string{"*"})
 	server.Use(gin.Logger())
 
 	// Recovery middleware recovers from any panics and writes a 500 if there was one.
 	server.Use(gin.Recovery())
+	// server.Use(cors.Default())
+	server.Use(middleware.CORSMiddleware())
 
 	// health check
 	server.GET("/ping", func(c *gin.Context) {
@@ -66,8 +69,19 @@ func StartHttpServer(logger *zap.Logger, config *config.Config, clients *GrpcCli
 	// Routes for Item Service
 	itemServiceGroup := server.Group(config.HttpConfig.ItemService.UrlGroup)
 	itemServiceController := controllers.NewItemServiceController(&config.HttpConfig.ItemService, logger, clients.ItemServiceClient)
-	// itemServiceGroup.Use(middleware.Authenticate(config.HttpConfig.UserService.Secret))
+	itemServiceGroup.Use(middleware.Authenticate(config.HttpConfig.UserService.Secret))
 	routes.ItemServiceRoutes(itemServiceGroup, itemServiceController, &config.HttpConfig.ItemService.Apis)
+
+	// server.Use(cors.Default())
+	// server.Use(middleware.CORSMiddleware())
+	// server.Use(cors.New(cors.Config{
+	// 	AllowOrigins:     []string{"http://localhost:3000"},
+	// 	AllowMethods:     []string{"GET, POST, PUT, DELETE"},
+	// 	AllowHeaders:     []string{"Origin"},
+	// 	ExposeHeaders:    []string{"Content-Length"},
+	// 	AllowCredentials: true,
+	// 	MaxAge:           12 * time.Hour,
+	// }))
 	err := server.Run(fmt.Sprintf(":%s", config.Port))
 	if err != nil {
 		logger.Fatal(
