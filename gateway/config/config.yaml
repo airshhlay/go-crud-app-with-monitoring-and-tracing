@@ -1,2 +1,49 @@
 hostname: localhost
 port: 5000
+ginMode: debug
+trustedProxies:
+  # - localhost:80
+  - frontend:80
+
+# configurations for incoming requests
+http:
+  userService:
+    host: localhost
+    port: 6000
+    secret: zhtq0eMHQpyQSZKV2ILyk2gXphHkMeCbBKNu5Xa5yhLHJwEahhcBWKP9to5WXRF
+    urlGroup: /api/user
+    apis:
+      signup:
+        endpoint: /signup
+        method: post
+      login:
+        endpoint: /login
+        method: post
+  itemService:
+    host: localhost
+    port: 7000
+    urlGroup: /api/item
+    apis:
+      addFav:
+        endpoint: /add/fav
+        method: post
+      deleteFav:
+        endpoint: /delete/fav
+        method: delete
+      getFavList:
+        endpoint: /get/list
+        method: get
+
+# config for routing requests to different services
+grpc:
+  userService:
+    label: userService_grpc
+    # host: localhost
+    host: userservice
+    port: 6000
+  itemService:
+    label: itemService_grpc
+    # host: localhost
+    host: itemservice
+    port: 7000
+

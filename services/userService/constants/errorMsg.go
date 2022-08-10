@@ -10,4 +10,5 @@ const (
 	ERROR_USER_DOES_NOT_EXIST_MSG = "error_user_does_not_exist"
 	ERROR_USER_PASSWORD_MSG       = "error_user_password"
 	ERROR_SERVER_START_FAIL_MSG   = "error_server_start_fail"
+	ERROR_TYPECAST_MSG            = "error_typecast"
 )

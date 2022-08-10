@@ -73,7 +73,9 @@ func (s *Server) DeleteFav(ctx context.Context, req *pb.DeleteFavReq) (*pb.Delet
 			ErrorCode: v.ErrorCode,
 		}, nil
 	}
-	return &pb.DeleteFavRes{}, nil
+	return &pb.DeleteFavRes{
+		ErrorCode: -1,
+	}, nil
 }
 
 func (s *Server) AddFav(ctx context.Context, req *pb.AddFavReq) (*pb.AddFavRes, error) {
@@ -95,7 +97,8 @@ func (s *Server) AddFav(ctx context.Context, req *pb.AddFavReq) (*pb.AddFavRes, 
 		}, nil
 	}
 	return &pb.AddFavRes{
-		Item: item,
+		ErrorCode: -1,
+		Item:      item,
 	}, nil
 }
 
@@ -119,6 +122,7 @@ func (s *Server) GetFavList(ctx context.Context, req *pb.GetFavListReq) (*pb.Get
 	}
 
 	return &pb.GetFavListRes{
+		ErrorCode:  -1,
 		Items:      items,
 		TotalPages: totalPages,
 	}, nil

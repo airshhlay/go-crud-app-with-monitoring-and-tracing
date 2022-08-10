@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+option go_package = "itemService/proto";
+package proto;
+
+service ItemService {
+  rpc DeleteFav(DeleteFavReq) returns (DeleteFavRes){}
+  rpc AddFav(AddFavReq) returns (AddFavRes){}
+  rpc GetFavList(GetFavListReq) returns (GetFavListRes){}
+}
+
+message DeleteFavReq {
+  int64 userId = 1;
+  int64 itemId = 2;
+  int64 shopId = 3;
+}
+
+message DeleteFavRes {
+  int32 errorCode = 1;
+  string errorMsg = 2;
+}
+
+message AddFavReq {
+  int64 userId = 1;
+  int64 itemId = 2;
+  int64 shopId = 3;
+}
+
+message AddFavRes {
+  int32 errorCode = 1;
+  string errorMsg = 2;
+  Item item = 3;
+}
+
+message Item {
+  string name = 1;
+  int64 price = 2;
+  int64 shopId = 3;
+  int64 itemId = 4;
+}
+
+message GetFavListReq {
+  int64 userId = 1;
+  int32 page = 2;
+}
+
+message GetFavListRes {
+  int32 errorCode = 1;
+  string errorMsg = 2;
+  repeated Item items = 3;
+  int32 totalPages = 4;
+}

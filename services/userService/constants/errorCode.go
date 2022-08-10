@@ -19,4 +19,7 @@ const (
 
 	// encryption errors
 	ERROR_PASSWORD_ENCRYPTION = 250021
+
+	// typecasting
+	ERROR_TYPECAST = 250031
 )

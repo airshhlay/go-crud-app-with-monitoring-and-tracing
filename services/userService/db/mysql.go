@@ -19,11 +19,12 @@ type DbManager struct {
 
 func InitDatabase(dbConfig *config.DbConfig, logger *zap.Logger) (*DbManager, error) {
 	cfg := mysql.Config{
-		User:   dbConfig.User,
-		Passwd: dbConfig.Password,
-		Net:    dbConfig.Net,
-		Addr:   fmt.Sprintf("%s:%s", dbConfig.Host, dbConfig.Port),
-		DBName: dbConfig.DbName,
+		User:                 dbConfig.User,
+		Passwd:               dbConfig.Password,
+		Net:                  dbConfig.Net,
+		Addr:                 fmt.Sprintf("%s:%s", dbConfig.Host, dbConfig.Port),
+		DBName:               dbConfig.DbName,
+		AllowNativePasswords: true,
 	}
 
 	// get database handle

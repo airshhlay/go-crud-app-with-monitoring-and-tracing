@@ -1,0 +1,13 @@
+hostname: localhost
+port: 6000
+# running mysql locally (comment out)
+db:
+  driver: mysql
+  host: userservice-db
+  # host: localhost
+  port: 3306
+  # port: 3307
+  user: entrytask
+  password: password
+  net: tcp
+  dbName: userservicedb
