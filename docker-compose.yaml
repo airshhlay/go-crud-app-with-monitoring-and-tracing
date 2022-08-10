@@ -1,12 +1,82 @@
 version: "3.6"
 services:
+  # API Gateway
   gateway:
     build: "./gateway"
     ports:
       - "5000"
-  nginx:
-    build: "./nginx"
+    networks:
+      - frontend
+      - backend
+  # Reverse Proxy
+  app:
+    build: "./frontend"
     ports:
       - "80:80"
     depends_on:
       - "gateway"
+    networks:
+      - frontend
+  # User Service
+  userservice:
+    build: "./services/userService"
+    ports:
+      - "6000"
+    networks:
+      - backend
+    depends_on:
+      - userservice-db
+  # User Service DB
+  userservice-db:
+    image: mysql
+    ports:
+      - "3307:3306"
+    volumes:
+      - userservice-mysql:/var/lib/mysql
+    networks:
+      - backend
+    environment:
+      - MYSQL_ROOT_USER=entrytask
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=userservicedb
+  # Item Service
+  itemservice:
+    build: "./services/itemService"
+    ports:
+      - "7000"
+    networks:
+      - backend
+    depends_on:
+      - itemservice-cache
+      - itemservice-db
+  itemservice-cache:
+    image: redis:6.2-alpine
+    ports:
+      - '6380:6379'
+    volumes: 
+      - itemservice-redis:/data
+  itemservice-db:
+    image: mysql
+    ports:
+      - "3308:3306"
+    volumes:
+    - itemservice-mysql:/var/lib/mysql
+    networks:
+      - backend
+    environment:
+      - MYSQL_ROOT_USER=entrytask
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=itemservicedb
+    
+
+
+volumes:
+  userservice-mysql:
+  itemservice-redis:
+  itemservice-mysql:
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge

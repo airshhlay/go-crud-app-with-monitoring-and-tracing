@@ -1,14 +1,25 @@
 import axios from "axios";
 const endpoint = process.env.NODE_ENV === "development" ? process.env.REACT_APP_ENDPOINT_LOCAL : process.env.REACT_APP_ENDPOINT_PROD;
-
-const getItemList = () => {
+const GET_LIST = process.env.REACT_APP_GET_LIST ? process.env.REACT_APP_GET_LIST : "/api/item/get/list"
+const ADD_ITEM = process.env.REACT_APP_ADD_ITEM ? process.env.REACT_APP_ADD_ITEM : "/api/item/add/fav"
+const DELETE_ITEM = process.env.REACT_APP_DELETE_ITEM ? process.env.REACT_APP_DELETE_ITEM : "/api/item/delete/fav"
+axios.defaults.withCredentials = true
+axios.interceptors.request.use(
+  (config) => {
+    config.withCredentials = true
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
+const getItemList = (page) => {
   return axios
-    .get(`${endpoint}/item/get/list`)
+    .get(`${endpoint}${GET_LIST}`, {withCredentials: true, params: {page}})
     .then((res) => {
       return res.data;
     })
     .catch((err) => {
-      console.log(err);
       throw err;
     });
 };
@@ -16,24 +27,26 @@ const getItemList = () => {
 const submitItem = (itemId, shopId) => {
   return axios
     .post(
-      `${endpoint}/item/add`,
+      `${endpoint}${ADD_ITEM}`, 
       { itemId, shopId },
+      {withCredentials: true},
     )
     .then((res) => {
-      return "ok";
+      return res.data;
     })
     .catch((err) => {
-      console.log(err);
       throw err;
     });
 };
 
 const deleteItem = (itemId, shopId) => {
+  console.log(`deleting item ${itemId}${shopId}`)
   return axios
-    .delete(`${endpoint}/item/delete/${itemId}/${shopId}`)
-    .then((res) => "ok")
+    .delete(`${endpoint}${DELETE_ITEM}`, {withCredentials: true, params: {itemId, shopId}})
+    .then((res) => {
+      return res.data;
+    })
     .catch((err) => {
-      console.log(err);
       throw err;
     });
 };

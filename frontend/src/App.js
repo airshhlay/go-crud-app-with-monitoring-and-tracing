@@ -2,24 +2,44 @@ import React from "react";
 import logo from "./logo.svg";
 import "./App.css";
 import Navigation from "./Navigation";
-import Welcome from "./Welcome";
+import Login from "./Login";
+import Home from "./Home"
+import Signup from "./Signup"
 
 function App() {
-  const [authenticated, setAuthenticated] = React.useState(false);
+  const [authenticated, setAuthenticated] = React.useState(localStorage.getItem("authenticated") ? localStorage.getItem("authenticated") : "");
+  const [page, setPage] = React.useState("")
   const onAuthentication = () => {
-    setAuthenticated(true);
+    setAuthenticated("yes");
+    localStorage.setItem("authenticated", "yes")
   };
   const onUnauthentication = () => {
-    setAuthenticated(false);
+    setAuthenticated("");
   };
 
   const handleLogout = () => {
-    setAuthenticated(false);
+    setAuthenticated("");
+    localStorage.removeItem("authenticated")
   };
+
+  const switchToLogin = () => {
+    setPage("login")
+  }
+
+  const switchToSignup = () => {
+    setPage("signup")
+  }
+
+  const isAuthenticated = () => {
+    return authenticated === "yes"
+  }
+
   return (
     <div className="App">
-      {!authenticated && <Welcome onAuthentication={onAuthentication} />}
-      {authenticated && (
+      {!isAuthenticated() && page === "" && <Home switchToLogin={switchToLogin} switchToSignup={switchToSignup} />}
+      {!isAuthenticated() && page === "login" && <Login onAuthentication={onAuthentication} />}
+      {!isAuthenticated() && page === "signup" && <Signup onAuthentication={onAuthentication} />}
+      {isAuthenticated() && (
         <Navigation
           onUnauthentication={onUnauthentication}
           handleLogout={handleLogout}
