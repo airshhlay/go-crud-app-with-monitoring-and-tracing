@@ -8,6 +8,7 @@ services:
     networks:
       - frontend
       - backend
+    restart: always
   # Reverse Proxy
   app:
     build: "./frontend"
@@ -17,6 +18,29 @@ services:
       - "gateway"
     networks:
       - frontend
+    restart: always
+  # User Service DB
+  # userservice-db:
+  #   image: mysql
+  #   ports:
+  #     - "3307:3306"
+  #   volumes:
+  #     - userservice-mysql:/var/lib/mysql
+  #     - ./services/userService/db/schema:/docker-entrypoint-initdb.d
+  #   command: --default-authentication-plugin=mysql_native_password
+  #   # restart: always
+  #   networks:
+  #     - backend
+  #   environment:
+  #     - MYSQL_ROOT_USER=root
+  #     - MYSQL_ROOT_PASSWORD=password
+  #     - MYSQL_DATABASE=userservicedb
+  #     - MYSQL_USER=entrytask
+  #     - MYSQL_PASSWORD=password
+  #   healthcheck:
+  #     test: ["CMD", 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-p$$MYSQL_ROOT_PASSWORD' ]
+  #     timeout: 20s
+  #     retries: 10
   # User Service
   userservice:
     build: "./services/userService"
@@ -24,34 +48,8 @@ services:
       - "6000"
     networks:
       - backend
-    depends_on:
-      - userservice-db
-    restart: always
-  # User Service DB
-  userservice-db:
-    image: mysql
-    ports:
-      - "3307:3306"
-    volumes:
-      - userservice-mysql:/var/lib/mysql
-      - ./services/userService/db/schema:/docker-entrypoint-initdb.d
-    command: --default-authentication-plugin=mysql_native_password
-    networks:
-      - backend
-    environment:
-      - MYSQL_ROOT_USER=entrytask
-      - MYSQL_ROOT_PASSWORD=password
-      - MYSQL_DATABASE=userservicedb
-  # Item Service
-  itemservice:
-    build: "./services/itemService"
-    ports:
-      - "7000"
-    networks:
-      - backend
-    depends_on:
-      - itemservice-cache
-      - itemservice-db
+    # depends_on:
+    #   - userservice-db
     restart: always
   itemservice-cache:
     image: redis:6.2-alpine
@@ -61,27 +59,45 @@ services:
       - '6380:6379'
     volumes: 
       - itemservice-redis:/data
-  itemservice-db:
-    image: mysql
+    restart: always
+  # itemservice-db:
+  #   image: mysql
+  #   networks:
+  #     - backend
+  #   ports:
+  #     - "3308:3306"
+  #   command: --default-authentication-plugin=mysql_native_password
+  #   # restart: always
+  #   volumes:
+  #     - ./services/itemService/db/schema:/docker-entrypoint-initdb.d
+  #     - itemservice-mysql:/var/lib/mysql
+  #   environment:
+  #     - MYSQL_ROOT_USER=root
+  #     - MYSQL_ROOT_PASSWORD=password
+  #     - MYSQL_DATABASE=itemservicedb
+  #     - MYSQL_USER=entrytask
+  #     - MYSQL_PASSWORD=password
+  #   healthcheck:
+  #     test: ["CMD", 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-p$$MYSQL_ROOT_PASSWORD' ]
+  #     timeout: 20s
+  #     retries: 10    
+  # Item Service
+  itemservice:
+    build: "./services/itemService"
+    ports:
+      - "7000"
     networks:
       - backend
-    ports:
-      - "3308:3306"
-    command: --default-authentication-plugin=mysql_native_password
-    volumes:
-      - ./services/itemService/db/schema:/docker-entrypoint-initdb.d
-      - itemservice-mysql:/var/lib/mysql
-    environment:
-      - MYSQL_ROOT_USER=entrytask
-      - MYSQL_ROOT_PASSWORD=password
-      - MYSQL_DATABASE=itemservicedb
-    
+    depends_on:
+      - itemservice-cache
+      # - itemservice-db
+    restart: always
 
 
 volumes:
-  userservice-mysql:
+  # userservice-mysql:
   itemservice-redis:
-  itemservice-mysql:
+  # itemservice-mysql:
 
 networks:
   frontend:

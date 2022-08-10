@@ -19,5 +19,7 @@ FROM scratch
 COPY --from=builder /app/itemService /app/
 COPY config ./config
 COPY log ./log
+COPY --from=builder /etc/ssl/certs ./etc/ssl/certs
+# OPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 EXPOSE 7000
 ENTRYPOINT ["/app/itemService"]

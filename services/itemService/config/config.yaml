@@ -13,7 +13,9 @@ maxPerPage: 5 # the number of items to display per page
 
 db:
   driver: mysql
-  host: itemservice-db
+  # host: itemservice-db
+  # host: localhost
+  host: host.docker.internal
   port: 3306
   # port: 3308
   user: entrytask
