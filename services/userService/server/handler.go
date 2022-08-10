@@ -29,7 +29,7 @@ func (h *Handler) CreateNewUser(username string, password string) (int64, error)
 	exists, _, err := h.checkUserExists(username)
 	if err != nil {
 		// error occured when querying database
-		return 0, customErr.Error{
+		return 0, &customErr.Error{
 			ErrorCode: constants.ERROR_DATABASE_QUERY,
 			ErrorMsg:  constants.ERROR_DATABASE_QUERY_MSG,
 		}
@@ -37,7 +37,7 @@ func (h *Handler) CreateNewUser(username string, password string) (int64, error)
 
 	// user already exists, return error
 	if exists {
-		return 0, customErr.Error{
+		return 0, &customErr.Error{
 			ErrorCode: constants.ERROR_USER_ALREADY_EXISTS,
 		}
 	}
@@ -49,7 +49,7 @@ func (h *Handler) CreateNewUser(username string, password string) (int64, error)
 			constants.ERROR_PASSWORD_ENCRYPTION_MSG,
 			zap.Error(err),
 		)
-		return 0, customErr.Error{
+		return 0, &customErr.Error{
 			ErrorCode: constants.ERROR_PASSWORD_ENCRYPTION,
 		}
 	}
@@ -65,7 +65,7 @@ func (h *Handler) CreateNewUser(username string, password string) (int64, error)
 			zap.String("query", query),
 			zap.Error(err),
 		)
-		return 0, customErr.Error{
+		return 0, &customErr.Error{
 			ErrorCode: constants.ERROR_DATABASE_INSERT,
 		}
 	}
@@ -91,7 +91,7 @@ func (h *Handler) VerifyLogin(username string, password string) (int64, error) {
 	exists, user, err := h.checkUserExists(username)
 	if err != nil {
 		// error occured when querying database
-		return 0, customErr.Error{
+		return 0, &customErr.Error{
 			ErrorCode: constants.ERROR_DATABASE_QUERY,
 			ErrorMsg:  constants.ERROR_DATABASE_QUERY_MSG,
 		}
@@ -99,7 +99,7 @@ func (h *Handler) VerifyLogin(username string, password string) (int64, error) {
 
 	// user does not exist, return error
 	if !exists {
-		return 0, customErr.Error{
+		return 0, &customErr.Error{
 			ErrorCode: constants.ERROR_USER_DOES_NOT_EXIST,
 		}
 	}
@@ -113,7 +113,7 @@ func (h *Handler) VerifyLogin(username string, password string) (int64, error) {
 			zap.String("username", username),
 			zap.Error(err),
 		)
-		return 0, customErr.Error{
+		return 0, &customErr.Error{
 			ErrorCode: constants.ERROR_USER_PASSWORD,
 		}
 	}

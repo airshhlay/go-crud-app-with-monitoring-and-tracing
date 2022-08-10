@@ -22,7 +22,15 @@ type DbConfig struct {
 }
 
 func LoadConfig(logger *zap.Logger) (*Config, error) {
+	// ex, error := os.Executable()
+	// if error != nil {
+	// 	panic(error)
+	// }
+	// exPath := filepath.Dir(ex)
+	// logger.Info(exPath)
 	viper.AddConfigPath("./config")
+	viper.AddConfigPath("/app/config")
+	viper.AddConfigPath("/app/userService/config")
 	viper.SetConfigType("yaml")
 	viper.SetConfigName("config")
 
