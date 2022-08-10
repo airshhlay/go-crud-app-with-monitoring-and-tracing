@@ -3,8 +3,9 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	config "userService/config"
-	constants "userService/constants"
+
+	"itemService/config"
+	"itemService/constants"
 
 	"go.uber.org/zap"
 
@@ -19,11 +20,12 @@ type DbManager struct {
 
 func InitDatabase(dbConfig *config.DbConfig, logger *zap.Logger) (*DbManager, error) {
 	cfg := mysql.Config{
-		User:   dbConfig.User,
-		Passwd: dbConfig.Password,
-		Net:    dbConfig.Net,
-		Addr:   fmt.Sprintf("%s:%s", dbConfig.Host, dbConfig.Port),
-		DBName: dbConfig.DbName,
+		User:      dbConfig.User,
+		Passwd:    dbConfig.Password,
+		Net:       dbConfig.Net,
+		Addr:      fmt.Sprintf("%s:%s", dbConfig.Host, dbConfig.Port),
+		DBName:    dbConfig.DbName,
+		ParseTime: true,
 	}
 
 	// get database handle
@@ -66,6 +68,16 @@ func (dm *DbManager) QueryOne(query string) *sql.Row {
 	return res
 }
 
+func (dm *DbManager) QueryRows(query string) (*sql.Rows, error) {
+	rows, err := dm.db.Query(query)
+	dm.logger.Info(
+		constants.INFO_DATABASE_QUERY_ROWS,
+		zap.String("query", query),
+		zap.Error(err),
+	)
+	return rows, err
+}
+
 func (dm *DbManager) InsertRow(query string) (int64, error) {
 	res, err := dm.db.Exec(query)
 
@@ -87,11 +99,17 @@ func (dm *DbManager) InsertRow(query string) (int64, error) {
 	return id, nil
 }
 
-func (dm *DbManager) QueryMany(query string) (*sql.Rows, error) {
-	res, err := dm.db.Query(query)
+func (dm *DbManager) DeleteOne(query string) (int64, error) {
+	res, err := dm.db.Exec(query)
 	dm.logger.Info(
-		constants.INFO_DATABASE_QUERY,
+		constants.INFO_DATABASE_DELETE,
 		zap.String("query", query),
+		zap.Any("res", res),
 	)
-	return res, err
+
+	if err != nil {
+		return 0, err
+	}
+
+	return res.RowsAffected()
 }

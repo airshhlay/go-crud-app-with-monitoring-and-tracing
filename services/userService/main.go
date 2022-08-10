@@ -18,7 +18,7 @@ func main() {
 	}
 
 	// read in config
-	config, err := config.LoadConfig()
+	config, err := config.LoadConfig(logger)
 	if err != nil {
 		logger.Fatal(
 			"Failed to load config",
@@ -29,7 +29,7 @@ func main() {
 	logger.Info("Loaded config")
 
 	// connect to database, get database manager
-	dbManager, _ := db.Init(&config.DbConfig)
+	dbManager, _ := db.InitDatabase(&config.DbConfig, logger)
 
 	// create server struct
 	server := server.Server{}

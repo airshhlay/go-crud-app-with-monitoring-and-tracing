@@ -1,10 +1,8 @@
 package config
 
 import (
-	"fmt"
-	"log"
-
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
 type Config struct {
@@ -23,14 +21,17 @@ type DbConfig struct {
 	Password string `mapstructure:password`
 }
 
-func LoadConfig() (*Config, error) {
+func LoadConfig(logger *zap.Logger) (*Config, error) {
 	viper.AddConfigPath("./config")
 	viper.SetConfigType("yaml")
 	viper.SetConfigName("config")
 
 	err := viper.ReadInConfig()
 	if err != nil {
-		log.Fatalf("Error reading config file, %v\n", err)
+		logger.Fatal(
+			"Error reading config file",
+			zap.Error(err),
+		)
 		return nil, err
 	}
 
@@ -38,14 +39,19 @@ func LoadConfig() (*Config, error) {
 	err = viper.Unmarshal(config)
 
 	if err != nil {
-		fmt.Printf("Unable to unmarshal into config struct, %v\n", err)
+		logger.Fatal(
+			"Unable to unmarshal into config struct",
+			zap.Error(err),
+		)
 		return nil, err
 	}
 
 	err = viper.UnmarshalKey("db", &config.DbConfig)
-
 	if err != nil {
-		fmt.Printf("Unable to unmarshal into dbconfig struct, %v\n", err)
+		logger.Fatal(
+			"Unable to unmarshal into dbconfig struct",
+			zap.Error(err),
+		)
 		return nil, err
 	}
 
