@@ -12,7 +12,7 @@ import (
 
 func main() {
 	// set logger
-	logger, err := zap.NewProduction()
+	logger, err := NewLogger()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -29,11 +29,22 @@ func main() {
 	logger.Info("Loaded config")
 
 	// connect to database, get database manager
-	dbManager, _ := db.InitDatabase(&config.DbConfig, logger)
+	dbManager, err := db.InitDatabase(&config.DbConfig, logger)
+	if err != nil {
+		panic(err)
+	}
 
 	// create server struct
 	server := server.Server{}
 
 	// start grpc server
 	server.StartServer(config, dbManager, logger)
+}
+
+func NewLogger() (*zap.Logger, error) {
+	cfg := zap.NewProductionConfig()
+	cfg.OutputPaths = []string{
+		"./log/service.log", "stderr",
+	}
+	return cfg.Build()
 }

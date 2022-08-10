@@ -22,7 +22,7 @@ db:
   dbName: itemservicedb
 
 redis:
-  host: localhost
+  host: itemservice-cache
   port: 6379
   # port: 6380
   password: ""

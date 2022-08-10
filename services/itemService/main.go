@@ -12,9 +12,10 @@ import (
 
 func main() {
 	// set logger
-	logger, err := zap.NewProduction()
+	logger, err := NewLogger()
 	if err != nil {
 		log.Fatal(err)
+		panic(err)
 	}
 
 	// read in config
@@ -24,18 +25,33 @@ func main() {
 			"Failed to load config",
 			zap.Error(err),
 		)
+		panic(err)
 	}
 
 	logger.Info("Loaded config")
 
 	// connect to database, get database manager
-	dbManager, _ := db.InitDatabase(&config.DbConfig, logger)
+	dbManager, err := db.InitDatabase(&config.DbConfig, logger)
+	if err != nil {
+		panic(err)
+	}
 
 	// connect to redis, get redis manager
-	redisManager, _ := db.InitRedis(&config.RedisConfig, logger)
+	redisManager, err := db.InitRedis(&config.RedisConfig, logger)
+	if err != nil {
+		panic(err)
+	}
 	// create server struct
 	server := server.Server{}
 
 	// start grpc server
 	server.StartServer(config, logger, dbManager, redisManager)
+}
+
+func NewLogger() (*zap.Logger, error) {
+	cfg := zap.NewProductionConfig()
+	cfg.OutputPaths = []string{
+		"./log/service.log", "stderr",
+	}
+	return cfg.Build()
 }
