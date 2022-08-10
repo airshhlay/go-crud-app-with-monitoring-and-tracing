@@ -3,7 +3,7 @@ port: 5000
 ginMode: debug
 trustedProxies:
   # - localhost:80
-  - nginx:80
+  - frontend:80
 
 # configurations for incoming requests
 http:

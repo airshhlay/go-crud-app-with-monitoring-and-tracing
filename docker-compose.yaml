@@ -26,6 +26,7 @@ services:
       - backend
     depends_on:
       - userservice-db
+    restart: always
   # User Service DB
   userservice-db:
     image: mysql
@@ -33,6 +34,7 @@ services:
       - "3307:3306"
     volumes:
       - userservice-mysql:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
     networks:
       - backend
     environment:
@@ -49,20 +51,24 @@ services:
     depends_on:
       - itemservice-cache
       - itemservice-db
+    restart: always
   itemservice-cache:
     image: redis:6.2-alpine
+    networks:
+      - backend
     ports:
       - '6380:6379'
     volumes: 
       - itemservice-redis:/data
   itemservice-db:
     image: mysql
-    ports:
-      - "3308:3306"
-    volumes:
-    - itemservice-mysql:/var/lib/mysql
     networks:
       - backend
+    ports:
+      - "3308:3306"
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+    - itemservice-mysql:/var/lib/mysql
     environment:
       - MYSQL_ROOT_USER=entrytask
       - MYSQL_ROOT_PASSWORD=password

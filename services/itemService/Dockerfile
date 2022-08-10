@@ -17,22 +17,6 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build
 # final stage
 FROM scratch
 COPY --from=builder /app/itemService /app/
-COPY config .
+COPY config ./config
 EXPOSE 7000
 ENTRYPOINT ["/app/itemService"]
-
-# FROM golang:1.17rc1-alpine
-
-# WORKDIR /app
-
-# COPY go.mod ./
-# COPY go.sum ./
-# RUN go mod download
-
-# COPY . ./
-
-# RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build
-
-# EXPOSE 7000
-
-# ENTRYPOINT [ "/itemService" ]
