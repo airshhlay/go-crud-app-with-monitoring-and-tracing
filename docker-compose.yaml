@@ -34,6 +34,7 @@ services:
       - "3307:3306"
     volumes:
       - userservice-mysql:/var/lib/mysql
+      - ./services/userService/db/schema:/docker-entrypoint-initdb.d
     command: --default-authentication-plugin=mysql_native_password
     networks:
       - backend
@@ -68,7 +69,8 @@ services:
       - "3308:3306"
     command: --default-authentication-plugin=mysql_native_password
     volumes:
-    - itemservice-mysql:/var/lib/mysql
+      - ./services/itemService/db/schema:/docker-entrypoint-initdb.d
+      - itemservice-mysql:/var/lib/mysql
     environment:
       - MYSQL_ROOT_USER=entrytask
       - MYSQL_ROOT_PASSWORD=password
