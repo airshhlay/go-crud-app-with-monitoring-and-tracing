@@ -5,12 +5,14 @@ import (
 	config "gateway/config"
 	req "gateway/dto/request"
 	res "gateway/dto/response"
+	metrics "gateway/metrics"
 	proto "gateway/proto"
 	"net/http"
 	"strconv"
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -42,6 +44,18 @@ func NewUserServiceController(config *config.UserServiceConfig, logger *zap.Logg
 }
 
 func (u *UserServiceController) LoginHandler(c *gin.Context) {
+	var errorCodeStr string
+	var errorCodeInt int
+
+	// observer request latency
+	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
+		metrics.RequestLatency.WithLabelValues(u.config.Label, c.Request.URL.Path, errorCodeStr)
+	}))
+
+	defer func() {
+		timer.ObserveDuration()
+	}()
+
 	var loginReq req.LoginReq
 	err := c.BindJSON(&loginReq)
 	if err != nil {
@@ -50,6 +64,7 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 			zap.Error(err),
 		)
 		u.removeCookie(c, token)
+		errorCodeInt = 400
 		c.JSON(200, gin.H{
 			"errorCode": 400,
 			"errorMsg":  "invalid_login_request",
@@ -70,6 +85,7 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 	clientLoginRes, err := u.client.Login(c, clientLoginReq)
 	if err != nil {
 		u.removeCookie(c, token)
+		errorCodeInt = 500
 		c.JSON(500, "server_error")
 		return
 	}
@@ -87,6 +103,7 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 				zap.Error(err),
 			)
 			u.removeCookie(c, token)
+			errorCodeInt = 500
 			c.IndentedJSON(500, "server_error")
 		} else {
 			// set jwt token in cookie
@@ -110,6 +127,10 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 		"response",
 		zap.Any("res", clientLoginRes),
 	)
+	errorCodeInt = int(loginRes.ErrorCode)
+
+	// errorCode, if any
+	errorCodeStr = strconv.Itoa(errorCodeInt)
 	c.IndentedJSON(200, loginRes)
 }
 
@@ -128,6 +149,17 @@ func (u *UserServiceController) generateToken(userId int64) (string, time.Time, 
 }
 
 func (u *UserServiceController) SignupHandler(c *gin.Context) {
+	var errorCodeStr string
+	var errorCodeInt int
+
+	// observer request latency
+	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
+		metrics.RequestLatency.WithLabelValues(u.config.Label, c.Request.URL.Path, errorCodeStr)
+	}))
+	defer func() {
+		timer.ObserveDuration()
+	}()
+
 	var signupReq req.SignupReq
 	err := c.BindJSON(&signupReq)
 	if err != nil {
@@ -136,6 +168,7 @@ func (u *UserServiceController) SignupHandler(c *gin.Context) {
 			zap.Error(err),
 		)
 		u.removeCookie(c, token)
+		errorCodeInt = 400
 		c.JSON(200, gin.H{
 			"errorCode": 400,
 			"errorMsg":  "invalid_signup_request",
@@ -154,6 +187,7 @@ func (u *UserServiceController) SignupHandler(c *gin.Context) {
 	// err if issue with client connection
 	clientLoginRes, err := u.client.Signup(c, clientSignupReq)
 	if err != nil {
+		errorCodeInt = 400
 		u.removeCookie(c, token)
 		c.JSON(500, "server_error")
 		return
@@ -162,6 +196,9 @@ func (u *UserServiceController) SignupHandler(c *gin.Context) {
 		u.removeCookie(c, token)
 	}
 
+	errorCodeInt = int(clientLoginRes.ErrorCode)
+	// errorCode, if any
+	errorCodeStr = strconv.Itoa(errorCodeInt)
 	c.JSON(200, clientLoginRes)
 }
 

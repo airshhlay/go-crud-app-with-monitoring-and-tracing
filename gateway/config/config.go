@@ -10,6 +10,7 @@ type Config struct {
 	Port           string     `mapstructure:port`
 	GinMode        string     `mapstructure: ginMode`
 	TrustedProxies []string   `mapstructure:trustedProxies`
+	AllowedOrigins []string   `mapstructure:allowedOrigins`
 	HttpConfig     HttpConfig `mapstructure:http`
 	GrpcConfig     GrpcConfig `mapstructure:grpc`
 }

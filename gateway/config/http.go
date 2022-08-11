@@ -5,6 +5,7 @@ type HttpConfig struct {
 	ItemService ItemServiceConfig `mapstructure:itemService`
 }
 type ItemServiceConfig struct {
+	Label    string          `mapstructure:label`
 	Host     string          `mapstructure:host`
 	Port     string          `mapstructure:port`
 	UrlGroup string          `mapstructure:urlGroup`
@@ -12,6 +13,7 @@ type ItemServiceConfig struct {
 }
 
 type UserServiceConfig struct {
+	Label    string          `mapstructure:label`
 	Host     string          `mapstructure:host`
 	Port     string          `mapstructure:port`
 	Secret   string          `mapstructure:secret`

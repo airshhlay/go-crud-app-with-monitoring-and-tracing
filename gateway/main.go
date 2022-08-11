@@ -4,7 +4,8 @@ import (
 	"fmt"
 	client "gateway/client"
 	controllers "gateway/controllers"
-	"gateway/middleware"
+	metrics "gateway/metrics"
+	middleware "gateway/middleware"
 	routes "gateway/routes"
 
 	"google.golang.org/grpc/credentials/insecure"
@@ -34,6 +35,8 @@ func main() {
 		panic(err)
 	}
 
+	// initialise metrics metrics
+	metrics.Init()
 	// start the grpc server
 	clients := StartGrpcClients(logger, config)
 	// start http server
@@ -51,8 +54,7 @@ func StartHttpServer(logger *zap.Logger, config *config.Config, clients *GrpcCli
 
 	// Recovery middleware recovers from any panics and writes a 500 if there was one.
 	server.Use(gin.Recovery())
-	// server.Use(cors.Default())
-	server.Use(middleware.CORSMiddleware())
+	server.Use(middleware.CORSMiddleware(config))
 
 	// health check
 	server.GET("/ping", func(c *gin.Context) {
@@ -61,15 +63,20 @@ func StartHttpServer(logger *zap.Logger, config *config.Config, clients *GrpcCli
 		})
 	})
 
+	// proemtheus metrics endpoint
+	server.GET("/metrics", metrics.PrometheusHandler())
+
 	// Routes for User Service
 	userServiceGroup := server.Group(config.HttpConfig.UserService.UrlGroup)
 	userServiceController := controllers.NewUserServiceController(&config.HttpConfig.UserService, logger, clients.UserServiceClient)
+	userServiceGroup.Use(middleware.PrometheusMiddleware(config)) // use prometheus middleware
 	routes.UserServiceRoutes(userServiceGroup, userServiceController, &config.HttpConfig.UserService.Apis)
 
 	// Routes for Item Service
 	itemServiceGroup := server.Group(config.HttpConfig.ItemService.UrlGroup)
 	itemServiceController := controllers.NewItemServiceController(&config.HttpConfig.ItemService, logger, clients.ItemServiceClient)
 	itemServiceGroup.Use(middleware.Authenticate(config.HttpConfig.UserService.Secret))
+	itemServiceGroup.Use(middleware.PrometheusMiddleware(config)) // use prometheus middleware
 	routes.ItemServiceRoutes(itemServiceGroup, itemServiceController, &config.HttpConfig.ItemService.Apis)
 
 	// server.Use(cors.Default())
