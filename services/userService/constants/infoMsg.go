@@ -15,4 +15,6 @@ const (
 	// request and response
 	INFO_USER_LOGIN_REQ  = "info_user_login_req"
 	INFO_USER_SIGNUP_REQ = "info_user_signup_req"
+
+	INFO_PROM_SERVER_START_MSG = "info_prom_server_start"
 )

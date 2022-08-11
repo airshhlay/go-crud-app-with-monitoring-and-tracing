@@ -12,3 +12,9 @@ db:
   password: password
   net: tcp
   dbName: userservicedb
+
+prometheus:
+  host: localhost
+  port: 6001
+  endpoint: /metrics
+  

@@ -22,4 +22,7 @@ const (
 
 	// typecasting
 	ERROR_TYPECAST = 250031
+
+	// prometheus
+	ERROR_PROM_INIT_CUSTOM_METRICS = 250041
 )
