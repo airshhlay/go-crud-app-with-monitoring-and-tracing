@@ -25,8 +25,7 @@ export default function Login(props) {
     login(values.username, values.password)
       .then((res) => {
         if (!res.errorCode) {
-          setErrorMessage("Wrong username and/or password.")
-          return
+          return setErrorMessage("Unexpected error occured. Please try again later!")
         }
         if (res.errorCode && res.errorCode !== -1) {
           switch (res.errorCode) {
@@ -41,52 +40,10 @@ export default function Login(props) {
         props.onAuthentication();
       })
       .catch((err) => {
-        console.log(err)
         setErrorMessage("Unexpected error occured. Please try again later!")
       });
   };
 
-
-  // const handleLogin = () => {
-  //   // authenticate user
-  //   login(username, password)
-  //     .then(() => {
-  //       props.onAuthentication();
-  //       setUsername(null);
-  //       setPassword(null);
-  //     })
-  //     .catch((err) => {
-  //       if (err.response) {
-  //         if (err.response.status === 400) {
-  //           showFailureMsg("User already exists");
-  //         }
-  //       } else {
-  //         showFailureMsg(err)
-  //       }
-  //     });
-  // };
-
-  // const handleSignup = () => {
-  //   if (!username || username.length > 8 || username.length < 3) {
-  //     showFailureMsg('Username must be 3 to 8 characters long');
-  //     return;
-  //   }
-  //   if (!password || password.length < 8 || password.length >= 15) {
-  //     showFailureMsg('Password must be 8 to 15 characters long');
-  //     return;
-  //   }
-  //   signup(username, password)
-  //     .then(() => {
-  //       showSuccessMsg("Signup successful. You can now login.")
-  //       setUsername(null);
-  //       setPassword(null);
-  //     })
-  //     .catch((err) => {
-  //       if (err.response) {
-  //         showFailureMsg(err.response.data.errorMsg);
-  //       }
-  //     });
-  // };
 
   return (
     <Row type="flex" justify="center" align="middle" style={{
