@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	client "gateway/client"
+	constants "gateway/constants"
 	controllers "gateway/controllers"
 	metrics "gateway/metrics"
 	middleware "gateway/middleware"
@@ -35,6 +36,8 @@ func main() {
 		panic(err)
 	}
 
+	// cleanup := tracing.InitTracer()
+
 	// initialise metrics metrics
 	metrics.Init()
 	// start the grpc server
@@ -48,23 +51,18 @@ func StartHttpServer(logger *zap.Logger, config *config.Config, clients *GrpcCli
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	server := gin.Default()
+	server := gin.New()
 	server.SetTrustedProxies([]string{"*"})
-	server.Use(gin.Logger())
+
+	// ignore metrics endpoint when logging
+	server.Use(gin.LoggerWithConfig(gin.LoggerConfig{SkipPaths: []string{config.PrometheusConfig.Endpoint}}))
 
 	// Recovery middleware recovers from any panics and writes a 500 if there was one.
 	server.Use(gin.Recovery())
 	server.Use(middleware.CORSMiddleware(config))
 
-	// health check
-	server.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "pong",
-		})
-	})
-
-	// proemtheus metrics endpoint
-	server.GET("/metrics", metrics.PrometheusHandler())
+	// prometheus metrics endpoint
+	server.GET(config.PrometheusConfig.Endpoint, metrics.PrometheusHandler())
 
 	// Routes for User Service
 	userServiceGroup := server.Group(config.HttpConfig.UserService.UrlGroup)
@@ -75,8 +73,8 @@ func StartHttpServer(logger *zap.Logger, config *config.Config, clients *GrpcCli
 	// Routes for Item Service
 	itemServiceGroup := server.Group(config.HttpConfig.ItemService.UrlGroup)
 	itemServiceController := controllers.NewItemServiceController(&config.HttpConfig.ItemService, logger, clients.ItemServiceClient)
-	itemServiceGroup.Use(middleware.Authenticate(config.HttpConfig.UserService.Secret))
-	itemServiceGroup.Use(middleware.PrometheusMiddleware(config)) // use prometheus middleware
+	itemServiceGroup.Use(middleware.Authenticate(config.HttpConfig.UserService.Secret, logger)) // authenticate requests to item service
+	itemServiceGroup.Use(middleware.PrometheusMiddleware(config))                               // use prometheus middleware
 	routes.ItemServiceRoutes(itemServiceGroup, itemServiceController, &config.HttpConfig.ItemService.Apis)
 
 	// server.Use(cors.Default())
@@ -92,7 +90,7 @@ func StartHttpServer(logger *zap.Logger, config *config.Config, clients *GrpcCli
 	err := server.Run(fmt.Sprintf(":%s", config.Port))
 	if err != nil {
 		logger.Fatal(
-			"error_server_failure",
+			constants.ERROR_SERVER_START_FAIL_MSG,
 			zap.Error(err),
 		)
 		panic(err)

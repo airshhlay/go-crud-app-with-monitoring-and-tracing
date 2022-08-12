@@ -7,8 +7,10 @@ import (
 )
 
 var (
-	TotalRequests  *prometheus.CounterVec
-	RequestLatency *prometheus.HistogramVec
+	TotalRequests        *prometheus.CounterVec
+	RequestLatency       *prometheus.HistogramVec
+	ResponseSize         *prometheus.HistogramVec
+	AuthenticateDuration *prometheus.HistogramVec
 )
 
 // prometheus handler for the /metrics endpoint
@@ -36,11 +38,32 @@ func Init() error {
 		prometheus.HistogramOpts{
 			Name:    "http_request_duration_seconds",
 			Help:    "Measures the duration taken for each request",
-			Buckets: prometheus.LinearBuckets(0.01, 0.05, 10),
+			Buckets: []float64{0.01, 0.02, 0.05, 0.1, 0.2, 2},
 		},
 		[]string{"service_label", "path", "errorCode"},
 	)
 	prometheus.MustRegister(RequestLatency)
+
+	// response size
+	ResponseSize = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "http_response_size_bytes",
+			Help:    "Measures the size of each response in bytes",
+			Buckets: prometheus.LinearBuckets(0, 450, 8),
+		},
+		[]string{"service_label", "path", "errorCode"},
+	)
+	prometheus.MustRegister(ResponseSize)
+
+	AuthenticateDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "process_authenticate_duration_seconds",
+			Help:    "Measures the duration taken to sign and issue a jwt token to the user.",
+			Buckets: prometheus.LinearBuckets(0, 0.01, 6),
+		},
+		[]string{"success"},
+	)
+	prometheus.MustRegister(AuthenticateDuration)
 
 	return nil
 }

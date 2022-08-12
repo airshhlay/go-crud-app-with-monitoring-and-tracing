@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	config "gateway/config"
 	metrics "gateway/metrics"
 
@@ -11,7 +10,6 @@ import (
 
 func PrometheusMiddleware(config *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		fmt.Println("prometheus middleware")
 		// increment the total number of requests
 		metrics.TotalRequests.With(
 			prometheus.Labels{

@@ -39,13 +39,21 @@ func (i *ItemServiceController) AddFavHandler(c *gin.Context) {
 	var errorCodeStr string
 	var errorCodeInt int
 
-	// observer request latency
+	// observe request latency
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-		metrics.RequestLatency.WithLabelValues(i.config.Label, c.Request.URL.Path, errorCodeStr)
+		metrics.RequestLatency.WithLabelValues(i.config.Label, c.Request.URL.Path, errorCodeStr).Observe(v)
 	}))
 
 	defer func() {
 		timer.ObserveDuration()
+	}()
+
+	// observe response size
+	responseSize := prometheus.ObserverFunc(func(v float64) {
+		metrics.ResponseSize.WithLabelValues(i.config.Label, c.Request.URL.Path, errorCodeStr)
+	})
+	defer func() {
+		responseSize.Observe(float64(c.Writer.Size()))
 	}()
 
 	userId := i.getUserId(c)
@@ -131,9 +139,9 @@ func (i *ItemServiceController) DeleteFavHandler(c *gin.Context) {
 	var errorCodeStr string
 	var errorCodeInt int
 
-	// observer request latency
+	// observe request latency
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-		metrics.RequestLatency.WithLabelValues(i.config.Label, c.Request.URL.Path, errorCodeStr)
+		metrics.RequestLatency.WithLabelValues(i.config.Label, c.Request.URL.Path, errorCodeStr).Observe(v)
 	}))
 	defer func() {
 		timer.ObserveDuration()
@@ -194,10 +202,18 @@ func (i *ItemServiceController) GetFavListHandler(c *gin.Context) {
 
 	// observer request latency
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-		metrics.RequestLatency.WithLabelValues(i.config.Label, c.Request.URL.Path, errorCodeStr)
+		metrics.RequestLatency.WithLabelValues(i.config.Label, c.Request.URL.Path, errorCodeStr).Observe(v)
 	}))
 	defer func() {
 		timer.ObserveDuration()
+	}()
+
+	// observe response size
+	responseSize := prometheus.ObserverFunc(func(v float64) {
+		metrics.ResponseSize.WithLabelValues(i.config.Label, c.Request.URL.Path, errorCodeStr).Observe(v)
+	})
+	defer func() {
+		responseSize.Observe(float64(c.Writer.Size()))
 	}()
 
 	userId := i.getUserId(c)

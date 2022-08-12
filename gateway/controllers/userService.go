@@ -3,6 +3,7 @@ package controllers
 import (
 	client "gateway/client"
 	config "gateway/config"
+	constants "gateway/constants"
 	req "gateway/dto/request"
 	res "gateway/dto/response"
 	metrics "gateway/metrics"
@@ -45,11 +46,11 @@ func NewUserServiceController(config *config.UserServiceConfig, logger *zap.Logg
 
 func (u *UserServiceController) LoginHandler(c *gin.Context) {
 	var errorCodeStr string
-	var errorCodeInt int
+	var errorCodeInt int32
 
-	// observer request latency
+	// observe request latency
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-		metrics.RequestLatency.WithLabelValues(u.config.Label, c.Request.URL.Path, errorCodeStr)
+		metrics.RequestLatency.WithLabelValues(u.config.Label, c.Request.URL.Path, errorCodeStr).Observe(v)
 	}))
 
 	defer func() {
@@ -60,15 +61,12 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 	err := c.BindJSON(&loginReq)
 	if err != nil {
 		u.logger.Error(
-			"error_request_binding",
+			constants.ERROR_BAD_REQUEST_MSG,
 			zap.Error(err),
 		)
 		u.removeCookie(c, token)
-		errorCodeInt = 400
-		c.JSON(200, gin.H{
-			"errorCode": 400,
-			"errorMsg":  "invalid_login_request",
-		})
+		errorCodeInt = constants.ERROR_BAD_REQUEST
+		c.JSON(200, res.GatewayResponse{ErrorCode: errorCodeInt})
 		return
 	}
 	u.logger.Info(
@@ -85,8 +83,8 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 	clientLoginRes, err := u.client.Login(c, clientLoginReq)
 	if err != nil {
 		u.removeCookie(c, token)
-		errorCodeInt = 500
-		c.JSON(500, "server_error")
+		errorCodeInt = constants.ERROR_USERSERVICE_CONNECTION
+		c.JSON(200, res.GatewayResponse{ErrorCode: errorCodeInt})
 		return
 	}
 	if clientLoginRes.ErrorCode != -1 {
@@ -99,12 +97,12 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 		tokenString, expirationTime, err := u.generateToken(clientLoginRes.UserId)
 		if err != nil {
 			u.logger.Error(
-				"error_jwt_token",
+				constants.ERROR_GENERATE_JWT_TOKEN_MSG,
 				zap.Error(err),
 			)
 			u.removeCookie(c, token)
-			errorCodeInt = 500
-			c.IndentedJSON(500, "server_error")
+			errorCodeInt = constants.ERROR_GENERATE_JWT_TOKEN
+			c.IndentedJSON(200, res.GatewayResponse{ErrorCode: errorCodeInt})
 		} else {
 			// set jwt token in cookie
 			http.SetCookie(
@@ -127,10 +125,10 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 		"response",
 		zap.Any("res", clientLoginRes),
 	)
-	errorCodeInt = int(loginRes.ErrorCode)
+	errorCodeInt = loginRes.ErrorCode
 
 	// errorCode, if any
-	errorCodeStr = strconv.Itoa(errorCodeInt)
+	errorCodeStr = strconv.Itoa(int(errorCodeInt))
 	c.IndentedJSON(200, loginRes)
 }
 
@@ -150,29 +148,29 @@ func (u *UserServiceController) generateToken(userId int64) (string, time.Time, 
 
 func (u *UserServiceController) SignupHandler(c *gin.Context) {
 	var errorCodeStr string
-	var errorCodeInt int
+	var errorCodeInt int32
 
-	// observer request latency
+	// observe request latency
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-		metrics.RequestLatency.WithLabelValues(u.config.Label, c.Request.URL.Path, errorCodeStr)
+		metrics.RequestLatency.WithLabelValues(u.config.Label, c.Request.URL.Path, errorCodeStr).Observe(v)
 	}))
 	defer func() {
 		timer.ObserveDuration()
 	}()
 
+	// remove any token cookies
+	u.removeCookie(c, token)
+
 	var signupReq req.SignupReq
 	err := c.BindJSON(&signupReq)
 	if err != nil {
-		u.logger.Error(
-			"error_request_binding",
+		u.logger.Info(
+			constants.ERROR_BAD_REQUEST_MSG,
 			zap.Error(err),
 		)
 		u.removeCookie(c, token)
-		errorCodeInt = 400
-		c.JSON(200, gin.H{
-			"errorCode": 400,
-			"errorMsg":  "invalid_signup_request",
-		})
+		errorCodeInt = constants.ERROR_BAD_REQUEST
+		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ERROR_BAD_REQUEST})
 		return
 	}
 	u.logger.Info(
@@ -187,18 +185,18 @@ func (u *UserServiceController) SignupHandler(c *gin.Context) {
 	// err if issue with client connection
 	clientLoginRes, err := u.client.Signup(c, clientSignupReq)
 	if err != nil {
-		errorCodeInt = 400
+		errorCodeInt = constants.ERROR_USERSERVICE_CONNECTION
 		u.removeCookie(c, token)
-		c.JSON(500, "server_error")
+		c.JSON(200, res.GatewayResponse{ErrorCode: errorCodeInt})
 		return
 	}
 	if clientLoginRes.ErrorCode != 0 {
 		u.removeCookie(c, token)
 	}
 
-	errorCodeInt = int(clientLoginRes.ErrorCode)
+	errorCodeInt = clientLoginRes.ErrorCode
 	// errorCode, if any
-	errorCodeStr = strconv.Itoa(errorCodeInt)
+	errorCodeStr = strconv.Itoa(int(errorCodeInt))
 	c.JSON(200, clientLoginRes)
 }
 

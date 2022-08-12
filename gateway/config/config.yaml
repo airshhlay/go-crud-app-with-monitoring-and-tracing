@@ -51,6 +51,8 @@ grpc:
     port: 7000
 
 prometheus:
-
+  host: localhost
+  port: 5000
+  endpoint: /metrics
 
 jaegar:
