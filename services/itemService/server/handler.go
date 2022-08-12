@@ -8,13 +8,26 @@ import (
 	db "itemService/db"
 	customErr "itemService/errors"
 	shopee "itemService/external/shopee"
+	metrics "itemService/metrics"
 	pb "itemService/proto"
 	util "itemService/util"
+	"strconv"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	errGroup "golang.org/x/sync/errgroup"
 
 	"go.uber.org/zap"
+)
+
+const (
+	redisOpGetStr       = "get"
+	redisOpSetStr       = "set"
+	queryTypeInsert     = "INSERT"
+	queryTypeSelect     = "SELECT"
+	queryTypeDelete     = "DELETE"
+	deleteFavFromDbStr  = "deleteFav"
+	getFavListFromDbStr = "getFavList"
 )
 
 // Handler is a helper called by Server to handle various functions.
@@ -99,12 +112,13 @@ func (h *Handler) GetUserFavourites(userId int64, page int32) ([]*pb.Item, int32
 		i := i
 		g.Go(
 			func() error {
-				fmt.Println(fav.ItemId)
+				// metrics.TotalGoRoutines.Inc()
 				item, err := h.getItem(fav.ItemId, fav.ShopId)
 				items[i] = item
 				return err
 			})
 	}
+	// metrics.TotalGoRoutines.Dec()
 	// wait
 	err = g.Wait()
 	if err != nil {
@@ -160,7 +174,13 @@ func (h *Handler) getItem(itemId int64, shopId int64) (*pb.Item, error) {
 
 func (h *Handler) retrieveItemFromRedis(itemId int64, shopId int64) (*pb.Item, error) {
 	var item pb.Item
+
+	// time redis query
+	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
+		metrics.RedisOpDuration.WithLabelValues(h.config.ServiceLabel, redisOpGetStr).Observe(v)
+	}))
 	bytes, err := h.redisManager.Get(util.FormatRedisKeyForItem(itemId, shopId))
+	timer.ObserveDuration()
 	// unexpected error occured with redis op
 	if err != nil {
 		return nil, err
@@ -210,7 +230,13 @@ func (h *Handler) addItemToRedis(itemId int64, shopId int64, item *pb.Item) erro
 	}
 
 	expire := time.Duration(h.config.RedisConfig.Expire) * time.Second
+
+	// time redis op
+	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
+		metrics.RedisOpDuration.WithLabelValues(h.config.ServiceLabel, redisOpSetStr).Observe(v)
+	}))
 	err = h.redisManager.Set(util.FormatRedisKeyForItem(itemId, shopId), bytes, expire)
+	timer.ObserveDuration()
 	if err != nil {
 		h.logger.Error(
 			constants.ERROR_REDIS_SET_MSG,
@@ -263,7 +289,13 @@ func (h *Handler) addFavIntoDb(userId int64, itemId int64, shopId int64) error {
 func (h *Handler) removeFavFromDb(userId int64, itemId int64, shopId int64) error {
 	query := fmt.Sprintf("DELETE FROM Favourites WHERE userId='%d' and itemid='%d' and shopId='%d'", userId, itemId, shopId)
 
+	// time database query
+	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
+		metrics.DatabaseOpDuration.WithLabelValues(h.config.ServiceLabel, queryTypeDelete, deleteFavFromDbStr).Observe(v)
+	}))
 	rowsDeleted, err := h.dbManager.DeleteOne(query)
+	// observe duration at the end of this function
+	timer.ObserveDuration()
 	// unexpected error occured or no rows deleted
 	if err != nil || rowsDeleted != 1 {
 		h.logger.Error(
@@ -284,8 +316,20 @@ func (h *Handler) removeFavFromDb(userId int64, itemId int64, shopId int64) erro
 }
 
 func (h *Handler) fetchItemInfoFromExternal(itemId int64, shopId int64) (*pb.Item, error) {
+	successStr := "true"
+	errorCodeStr := "0"
+	// time database query
+	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
+		metrics.ExternalRequestDuration.WithLabelValues(h.config.ServiceLabel, h.config.ExternalConfig.Shopee.GetItem.Endpoint, successStr, errorCodeStr).Observe(v)
+	}))
+	defer func() {
+		timer.ObserveDuration()
+	}()
+
 	res, err := shopee.FetchItemPrice(&h.config.ExternalConfig.Shopee, h.logger, itemId, shopId)
+
 	if err != nil {
+		successStr = "false"
 		// external api call error
 		return nil, err
 	}
@@ -298,6 +342,8 @@ func (h *Handler) fetchItemInfoFromExternal(itemId int64, shopId int64) (*pb.Ite
 			zap.Int64("shopId", shopId),
 			zap.Any("res", res),
 		)
+		successStr = "false"
+		errorCodeStr = strconv.Itoa(res.Error)
 		return nil, &customErr.Error{constants.ERROR_EXTERNAL_SHOPEE_API_CALL, constants.ERROR_EXTERNAL_API_CALL_MSG, err}
 	}
 
