@@ -24,8 +24,8 @@ import (
 )
 
 const (
-	SIGNUP = "signup"
-	LOGIN  = "login"
+	signupStr = "signup"
+	loginStr  = "login"
 )
 
 // var (
@@ -46,6 +46,7 @@ const (
 // 	customizedCounterMetric.WithLabelValues("Test")
 // }
 
+// Server struct contains a reference to the handler. Used to start the grpc server.
 type Server struct {
 	pb.UnimplementedUserServiceServer
 	handler Handler
@@ -53,7 +54,8 @@ type Server struct {
 	config  *config.Config
 }
 
-func (s *Server) StartServer(config *config.Config, dbManager *db.DbManager, logger *zap.Logger) {
+// StartServer initialises the prometheus metrics, starts the HTTP server for the prometheus endpoint and starts the GRPC server.
+func (s *Server) StartServer(config *config.Config, dbManager *db.DatabaseManager, logger *zap.Logger) {
 	s.handler = Handler{
 		config:    config,
 		dbManager: dbManager,
@@ -65,8 +67,8 @@ func (s *Server) StartServer(config *config.Config, dbManager *db.DbManager, log
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", config.Port))
 	if err != nil {
 		logger.Fatal(
-			constants.ERROR_SERVER_START_FAIL_MSG,
-			zap.Int32("errorCode", constants.ERROR_SERVER_START_FAIL),
+			constants.ErrorServerStartFailMsg,
+			zap.Int32("errorCode", constants.ErrorServerStartFail),
 			zap.Error(err),
 		)
 	}
@@ -74,8 +76,6 @@ func (s *Server) StartServer(config *config.Config, dbManager *db.DbManager, log
 
 	// Create a HTTP server for prometheus.
 	http.Handle(config.PrometheusConfig.Endpoint, promhttp.HandlerFor(metrics.Reg, promhttp.HandlerOpts{}))
-	// http.Handle(config.PrometheusConfig.Endpoint, promhttp.Handler())
-	// httpServer := &http.Server{Handler: , Addr: fmt.Sprintf("%s:%s", config.PrometheusConfig.Host, config.PrometheusConfig.Port)}
 
 	// Create a gRPC Server with gRPC interceptor.
 	grpcServer := grpc.NewServer(
@@ -84,7 +84,7 @@ func (s *Server) StartServer(config *config.Config, dbManager *db.DbManager, log
 	)
 	if err != nil {
 		logger.Error(
-			constants.ERROR_PROM_INIT_CUSTOM_METRICS_MSG,
+			constants.ErrorPromInitCustomMetricsMsg,
 			zap.Error(err),
 		)
 	}
@@ -101,7 +101,7 @@ func (s *Server) StartServer(config *config.Config, dbManager *db.DbManager, log
 		// err := httpServer.ListenAndServe()
 		http.ListenAndServe(fmt.Sprintf(":%s", config.PrometheusConfig.Port), nil)
 		if err != nil {
-			logger.Fatal(constants.ERROR_PROM_HTTP_SERVER_MSG,
+			logger.Fatal(constants.ErrorPromHTTPServerMsg,
 				zap.Error(err))
 		} else {
 			logger.Info(constants.INFO_PROM_SERVER_START_MSG)
@@ -113,8 +113,8 @@ func (s *Server) StartServer(config *config.Config, dbManager *db.DbManager, log
 	err = grpcServer.Serve(listener)
 	if err != nil {
 		logger.Fatal(
-			constants.ERROR_SERVER_START_FAIL_MSG,
-			zap.Int32("errorCode", constants.ERROR_SERVER_START_FAIL),
+			constants.ErrorServerStartFailMsg,
+			zap.Int32("errorCode", constants.ErrorServerStartFail),
 			zap.Error(err),
 		)
 	} else {
@@ -125,10 +125,11 @@ func (s *Server) StartServer(config *config.Config, dbManager *db.DbManager, log
 	}
 }
 
+// Signup is the implementation of the grpc server service, as defined in service.proto
 func (s *Server) Signup(ctx context.Context, req *pb.SignupReq) (*pb.SignupRes, error) {
 	errorCodeStr := "-1"
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-		metrics.RequestDuration.WithLabelValues(s.config.ServiceLabel, SIGNUP, GET_USER_BY_USERNAME_OP, errorCodeStr).Observe(v)
+		metrics.RequestDuration.WithLabelValues(s.config.ServiceLabel, signupStr, errorCodeStr).Observe(v)
 	}))
 
 	// observe duration at the end of this function
@@ -140,10 +141,10 @@ func (s *Server) Signup(ctx context.Context, req *pb.SignupReq) (*pb.SignupRes, 
 	if err != nil {
 		v, ok := err.(*customErr.Error)
 		if !ok {
-			s.logger.Error(constants.ERROR_TYPECAST_MSG, zap.Error(err))
-			errorCodeStr = strconv.Itoa(constants.ERROR_TYPECAST)
+			s.logger.Error(constants.ErrorTypecastMsg, zap.Error(err))
+			errorCodeStr = strconv.Itoa(constants.ErrorTypecast)
 			return &pb.SignupRes{
-				ErrorCode: constants.ERROR_TYPECAST,
+				ErrorCode: constants.ErrorTypecast,
 			}, nil
 		}
 		errorCodeStr = strconv.Itoa(int(v.ErrorCode))
@@ -157,10 +158,11 @@ func (s *Server) Signup(ctx context.Context, req *pb.SignupReq) (*pb.SignupRes, 
 	}, nil
 }
 
+// Login is the implementation of the grpc server service, as defined in service.proto
 func (s *Server) Login(ctx context.Context, req *pb.LoginReq) (*pb.LoginRes, error) {
 	errorCodeStr := "-1"
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-		metrics.RequestDuration.WithLabelValues(s.config.ServiceLabel, LOGIN, GET_USER_BY_USERNAME_OP, errorCodeStr).Observe(v)
+		metrics.RequestDuration.WithLabelValues(s.config.ServiceLabel, loginStr, errorCodeStr).Observe(v)
 	}))
 
 	// observe duration at the end of this function
@@ -168,17 +170,17 @@ func (s *Server) Login(ctx context.Context, req *pb.LoginReq) (*pb.LoginRes, err
 		timer.ObserveDuration()
 	}()
 
-	var userId int64
+	var userID int64
 
 	// check if a user with the given username exists
-	userId, err := s.handler.VerifyLogin(req.Username, req.Password)
+	userID, err := s.handler.VerifyLogin(req.Username, req.Password)
 	if err != nil {
 		v, ok := err.(*customErr.Error)
 		if !ok {
-			s.logger.Error(constants.ERROR_TYPECAST_MSG, zap.Error(err))
-			errorCodeStr = strconv.Itoa(constants.ERROR_TYPECAST)
+			s.logger.Error(constants.ErrorTypecastMsg, zap.Error(err))
+			errorCodeStr = strconv.Itoa(constants.ErrorTypecast)
 			return &pb.LoginRes{
-				ErrorCode: constants.ERROR_TYPECAST,
+				ErrorCode: constants.ErrorTypecast,
 			}, nil
 		}
 		errorCodeStr = strconv.Itoa(int(v.ErrorCode))
@@ -189,6 +191,6 @@ func (s *Server) Login(ctx context.Context, req *pb.LoginReq) (*pb.LoginRes, err
 
 	return &pb.LoginRes{
 		ErrorCode: -1,
-		UserId:    userId,
+		UserId:    userID,
 	}, nil
 }

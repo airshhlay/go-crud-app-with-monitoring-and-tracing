@@ -1,16 +1,22 @@
 package constants
 
 const (
-	ERROR_DATABASE_MSG                 = "error_database_operation_failure"
-	ERROR_DATABASE_INSERT_MSG          = "error_database_insert_failure"
-	ERROR_DATABASE_QUERY_MSG           = "error_database_query_failure"
-	ERROR_DATABASE_CONNECTION_MSG      = "error_database_connection_failure"
-	ERROR_USER_ALREADY_EXISTS_MSG      = "error_user_already_exists"
-	ERROR_PASSWORD_ENCRYPTION_MSG      = "error_password_encryption"
-	ERROR_USER_DOES_NOT_EXIST_MSG      = "error_user_does_not_exist"
-	ERROR_USER_PASSWORD_MSG            = "error_user_password"
-	ERROR_SERVER_START_FAIL_MSG        = "error_server_start_fail"
-	ERROR_TYPECAST_MSG                 = "error_typecast"
-	ERROR_PROM_INIT_CUSTOM_METRICS_MSG = "error_prom_init_custom_metrics"
-	ERROR_PROM_HTTP_SERVER_MSG         = "error_prom_http_server"
+	// ErrorDatabaseInsertMsg for database insert failures
+	ErrorDatabaseInsertMsg = "error_database_insert_failure"
+	// ErrorDatabaseQueryMsg for database query failures
+	ErrorDatabaseQueryMsg = "error_database_query_failure"
+	// ErrorDatabaseConnectionMsg for database connection errors
+	ErrorDatabaseConnectionMsg = "error_database_connection_failure"
+	// ErrorPasswordEncryptionMsg for bcrypt encryption errors
+	ErrorPasswordEncryptionMsg = "error_password_encryption"
+	// ErrorServerStartFailMsg for when the grpc server fails to start
+	ErrorServerStartFailMsg = "error_server_start_fail"
+	// ErrorPromInitCustomMetricsMsg for when prometheus fails to initialise custom metrics
+	ErrorPromInitCustomMetricsMsg = "error_prom_init_custom_metrics"
+	// ErrorPromHTTPServerMsg for when the http server for prometheus metrics fails to start
+	ErrorPromHTTPServerMsg = "error_prom_http_server"
+	// ErrorUserPasswordMSg for errors with the user password
+	ErrorUserPasswordMsg = "error_user_password"
+	// ErrorTypecastMsg for errors typecasting error to customErr
+	ErrorTypecastMsg = "error_typecast"
 )
