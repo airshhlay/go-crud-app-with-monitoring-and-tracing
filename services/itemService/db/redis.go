@@ -5,7 +5,10 @@ import (
 	"itemService/config"
 	constants "itemService/constants"
 	errors "itemService/errors"
+	metrics "itemService/metrics"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/go-redis/redis"
 	"go.uber.org/zap"
@@ -16,6 +19,13 @@ type RedisManager struct {
 	config *config.RedisConfig
 	logger *zap.Logger
 }
+
+const (
+	redisOpGetStr = "get"
+	redisOpSetStr = "set"
+	trueStr       = "true"
+	falseStr      = "false"
+)
 
 func InitRedis(redisConfig *config.RedisConfig, logger *zap.Logger) (*RedisManager, error) {
 	cfg := redis.Options{
@@ -51,23 +61,16 @@ func InitRedis(redisConfig *config.RedisConfig, logger *zap.Logger) (*RedisManag
 }
 
 func (rm *RedisManager) Set(key string, bytes []byte, exp time.Duration) error {
-	// rm.logger.Info(
-	// 	constants.INFO_REDIS_SET,
-	// 	zap.String("key", key),
-	// 	zap.Any("val", val),
-	// 	zap.Duration("exp", exp),
-	// )
-	// bytes, err := util.MarshalProto(&val)
-	// if err != nil {
-	// 	rm.logger.Error(
-	// 		constants.ERROR_UNMARSHAL_MSG,
-	// 		zap.String("key", key),
-	// 		zap.Any("val", val),
-	// 		zap.Error(err),
-	// 	)
-	// 	return errors.Error{constants.ERROR_UNMARSHAL, constants.ERROR_UNMARSHAL_MSG, err}
-	// }
+	successStr := trueStr
+	// time redis op
+	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
+		metrics.RedisOpDuration.WithLabelValues(rm.config.ServiceLabel, redisOpGetStr, successStr).Observe(v)
+	}))
+	defer func() {
+		timer.ObserveDuration()
+	}()
 
+	// call the redis client
 	err := rm.client.Set(key, bytes, exp).Err()
 	if err != nil {
 		rm.logger.Error(
@@ -76,6 +79,8 @@ func (rm *RedisManager) Set(key string, bytes []byte, exp time.Duration) error {
 			zap.ByteString("bytes", bytes),
 			zap.Error(err),
 		)
+		// if error, set success to false
+		successStr = falseStr
 		return errors.Error{constants.ERROR_REDIS_SET, constants.ERROR_REDIS_SET_MSG, err}
 	}
 
@@ -89,6 +94,16 @@ func (rm *RedisManager) Set(key string, bytes []byte, exp time.Duration) error {
 }
 
 func (rm *RedisManager) Get(key string) ([]byte, error) {
+	successStr := trueStr
+	// time redis op
+	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
+		metrics.RedisOpDuration.WithLabelValues(rm.config.ServiceLabel, redisOpGetStr, successStr).Observe(v)
+	}))
+	defer func() {
+		timer.ObserveDuration()
+	}()
+
+	// call the redis client
 	bytes, err := rm.client.Get(key).Bytes()
 	if err != nil {
 		if err != redis.Nil {
@@ -98,6 +113,8 @@ func (rm *RedisManager) Get(key string) ([]byte, error) {
 				zap.String("key", key),
 				zap.Error(err),
 			)
+			// set success to false only if unexpected error occured
+			successStr = falseStr
 			return nil, errors.Error{constants.ERROR_REDIS_GET, constants.ERROR_REDIS_GET_MSG, err}
 		}
 		rm.logger.Info(

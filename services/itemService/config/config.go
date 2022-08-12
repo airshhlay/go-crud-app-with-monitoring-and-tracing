@@ -17,21 +17,23 @@ type Config struct {
 }
 
 type DbConfig struct {
-	Driver   string `mapstructure:driver`
-	Host     string `mapstructure:host`
-	Port     string `mapstructure:port`
-	User     string `mapstructure:user`
-	Net      string `mapstructure:net`
-	DbName   string `mapstructure:dbName`
-	Password string `mapstructure:password`
+	ServiceLabel string `mapstructure:"serviceLabel"`
+	Driver       string `mapstructure:driver`
+	Host         string `mapstructure:host`
+	Port         string `mapstructure:port`
+	User         string `mapstructure:user`
+	Net          string `mapstructure:net`
+	DbName       string `mapstructure:dbName`
+	Password     string `mapstructure:password`
 }
 
 type RedisConfig struct {
-	Host     string `mapstructure:host`
-	Port     string `mapstructure:port`
-	Password string `mapstructure:password`
-	Db       int    `mapstructure:db`
-	Expire   int    `mapstructure:expire`
+	ServiceLabel string `mapstructure:"serviceLabel"`
+	Host         string `mapstructure:host`
+	Port         string `mapstructure:port`
+	Password     string `mapstructure:password`
+	Db           int    `mapstructure:db`
+	Expire       int    `mapstructure:expire`
 }
 
 type ExternalConfig struct {

@@ -46,7 +46,7 @@ func init() {
 			Help:    "Measures the duration taken for a database operation",
 			Buckets: []float64{0.01, 0.02, 0.05, 0.1, 0.2, 2},
 		},
-		[]string{"service_label", "query_type", "query_label"},
+		[]string{"service_label", "query_type", "query_label", "success"},
 	)
 
 	RedisOpDuration = prometheus.NewHistogramVec(
@@ -55,7 +55,7 @@ func init() {
 			Help:    "Measures the duration taken for a redis operation to complete",
 			Buckets: []float64{0.01, 0.02, 0.05, 0.1, 0.2, 2},
 		},
-		[]string{"service_label", "op_type"},
+		[]string{"service_label", "op_type", "success"},
 	)
 
 	ExternalRequestDuration = prometheus.NewHistogramVec(
@@ -64,7 +64,7 @@ func init() {
 			Help:    "Measures the duration taken for an external HTTP request to complete",
 			Buckets: []float64{0.01, 0.02, 0.05, 0.1, 0.2, 2},
 		},
-		[]string{"service_label", "endpoint", "success", "errorCode"},
+		[]string{"endpoint", "success", "errorCode"},
 	)
 
 	// TotalGoRoutines = prometheus.NewGauge(

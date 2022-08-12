@@ -8,26 +8,20 @@ import (
 	db "itemService/db"
 	customErr "itemService/errors"
 	shopee "itemService/external/shopee"
-	metrics "itemService/metrics"
 	pb "itemService/proto"
 	util "itemService/util"
-	"strconv"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	errGroup "golang.org/x/sync/errgroup"
 
 	"go.uber.org/zap"
 )
 
 const (
-	redisOpGetStr       = "get"
-	redisOpSetStr       = "set"
-	queryTypeInsert     = "INSERT"
-	queryTypeSelect     = "SELECT"
-	queryTypeDelete     = "DELETE"
 	deleteFavFromDbStr  = "deleteFav"
 	getFavListFromDbStr = "getFavList"
+	addFavIntoDbStr     = "addFav"
+	getFavCount         = "getFavCount"
 )
 
 // Handler is a helper called by Server to handle various functions.
@@ -175,12 +169,7 @@ func (h *Handler) getItem(itemId int64, shopId int64) (*pb.Item, error) {
 func (h *Handler) retrieveItemFromRedis(itemId int64, shopId int64) (*pb.Item, error) {
 	var item pb.Item
 
-	// time redis query
-	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-		metrics.RedisOpDuration.WithLabelValues(h.config.ServiceLabel, redisOpGetStr).Observe(v)
-	}))
 	bytes, err := h.redisManager.Get(util.FormatRedisKeyForItem(itemId, shopId))
-	timer.ObserveDuration()
 	// unexpected error occured with redis op
 	if err != nil {
 		return nil, err
@@ -231,12 +220,7 @@ func (h *Handler) addItemToRedis(itemId int64, shopId int64, item *pb.Item) erro
 
 	expire := time.Duration(h.config.RedisConfig.Expire) * time.Second
 
-	// time redis op
-	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-		metrics.RedisOpDuration.WithLabelValues(h.config.ServiceLabel, redisOpSetStr).Observe(v)
-	}))
 	err = h.redisManager.Set(util.FormatRedisKeyForItem(itemId, shopId), bytes, expire)
-	timer.ObserveDuration()
 	if err != nil {
 		h.logger.Error(
 			constants.ERROR_REDIS_SET_MSG,
@@ -254,25 +238,17 @@ func (h *Handler) addItemToRedis(itemId int64, shopId int64, item *pb.Item) erro
 func (h *Handler) retrieveFavFromDb(userId int64, itemId int64, shopId int64) (*db.Favourite, string, error) {
 	var fav db.Favourite
 	query := fmt.Sprintf("SELECT * FROM Favourites WHERE userId='%d' AND itemId='%d' AND shopId='%d'", userId, itemId, shopId)
-	res := h.dbManager.QueryOne(query)
-	err := res.Scan(&fav.Id, &fav.UserId, &fav.ItemId, &fav.ShopId, &fav.TimeAdded)
+	err := h.dbManager.QueryOne(query, getFavListStr, &fav.Id, &fav.UserId, &fav.ItemId, &fav.ShopId, &fav.TimeAdded)
+	// err := res.Scan(&fav.Id, &fav.UserId, &fav.ItemId, &fav.ShopId, &fav.TimeAdded)
 
 	return &fav, query, err
 }
 
 func (h *Handler) addFavIntoDb(userId int64, itemId int64, shopId int64) error {
 	query := fmt.Sprintf("INSERT INTO Favourites(userId, itemId, shopId) VALUES('%d','%d','%d')", userId, itemId, shopId)
-	id, err := h.dbManager.InsertRow(query)
+	id, err := h.dbManager.InsertRow(query, addFavIntoDbStr)
 	if err != nil {
 		// error occured when inserting user into database
-		h.logger.Error(
-			constants.ERROR_DATABASE_INSERT_MSG,
-			zap.Int64("userId", userId),
-			zap.Int64("itemId", itemId),
-			zap.Int64("shopId", shopId),
-			zap.String("query", query),
-			zap.Error(err),
-		)
 		return &customErr.Error{constants.ERROR_DATABASE_INSERT, constants.ERROR_DATABASE_INSERT_MSG, err}
 	}
 	h.logger.Info(
@@ -289,24 +265,12 @@ func (h *Handler) addFavIntoDb(userId int64, itemId int64, shopId int64) error {
 func (h *Handler) removeFavFromDb(userId int64, itemId int64, shopId int64) error {
 	query := fmt.Sprintf("DELETE FROM Favourites WHERE userId='%d' and itemid='%d' and shopId='%d'", userId, itemId, shopId)
 
-	// time database query
-	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-		metrics.DatabaseOpDuration.WithLabelValues(h.config.ServiceLabel, queryTypeDelete, deleteFavFromDbStr).Observe(v)
-	}))
-	rowsDeleted, err := h.dbManager.DeleteOne(query)
-	// observe duration at the end of this function
-	timer.ObserveDuration()
+	rowsDeleted, err := h.dbManager.DeleteOne(query, deleteFavFromDbStr)
+
 	// unexpected error occured or no rows deleted
 	if err != nil || rowsDeleted != 1 {
-		h.logger.Error(
-			constants.ERROR_DATABASE_DELETE_MSG,
-			zap.Int64("userId", userId),
-			zap.Int64("itemId", itemId),
-			zap.Int64("shopId", shopId),
-			zap.Int64("rowsDeleted", rowsDeleted),
-			zap.Error(err),
-		)
-		if rowsDeleted != 0 {
+		if err == nil {
+			// error is nil but rows deleted is not 1
 			err = fmt.Errorf("rowsDeleted: %d", rowsDeleted)
 		}
 		return &customErr.Error{constants.ERROR_DATABASE_DELETE, constants.ERROR_DATABASE_DELETE_MSG, err}
@@ -316,20 +280,9 @@ func (h *Handler) removeFavFromDb(userId int64, itemId int64, shopId int64) erro
 }
 
 func (h *Handler) fetchItemInfoFromExternal(itemId int64, shopId int64) (*pb.Item, error) {
-	successStr := "true"
-	errorCodeStr := "0"
-	// time database query
-	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-		metrics.ExternalRequestDuration.WithLabelValues(h.config.ServiceLabel, h.config.ExternalConfig.Shopee.GetItem.Endpoint, successStr, errorCodeStr).Observe(v)
-	}))
-	defer func() {
-		timer.ObserveDuration()
-	}()
-
 	res, err := shopee.FetchItemPrice(&h.config.ExternalConfig.Shopee, h.logger, itemId, shopId)
 
 	if err != nil {
-		successStr = "false"
 		// external api call error
 		return nil, err
 	}
@@ -342,8 +295,6 @@ func (h *Handler) fetchItemInfoFromExternal(itemId int64, shopId int64) (*pb.Ite
 			zap.Int64("shopId", shopId),
 			zap.Any("res", res),
 		)
-		successStr = "false"
-		errorCodeStr = strconv.Itoa(res.Error)
 		return nil, &customErr.Error{constants.ERROR_EXTERNAL_SHOPEE_API_CALL, constants.ERROR_EXTERNAL_API_CALL_MSG, err}
 	}
 
@@ -359,7 +310,7 @@ func (h *Handler) retrieveFavListFromDb(userId int64, page int) ([]db.Favourite,
 	query := fmt.Sprintf("SELECT * FROM Favourites WHERE userId='%d' ORDER BY timeAdded desc LIMIT %d OFFSET %d", userId, h.config.MaxPerPage, h.config.MaxPerPage*page)
 
 	// query rows
-	rows, err := h.dbManager.QueryRows(query)
+	rows, err := h.dbManager.QueryRows(query, getFavListStr)
 	if err != nil {
 		// error occured when querying
 		h.logger.Error(
@@ -409,13 +360,9 @@ func (h *Handler) retrieveFavListFromDb(userId int64, page int) ([]db.Favourite,
 func (h *Handler) getFavouritesCount(userId int64) (int32, error) {
 	query := fmt.Sprintf("SELECT count(*) FROM Favourites WHERE userId='%d'", userId)
 	var count int
-	err := h.dbManager.QueryOne(query).Scan(&count)
+	// err := h.dbManager.QueryOne(query).Scan(&count)
+	err := h.dbManager.QueryOne(query, getFavCount, &count)
 	if err != nil {
-		h.logger.Error(
-			constants.ERROR_DATABASE_QUERY_MSG,
-			zap.String("query", query),
-			zap.Error(err),
-		)
 		return 0, &customErr.Error{constants.ERROR_DATABASE_QUERY, constants.ERROR_DATABASE_QUERY_MSG, err}
 	}
 

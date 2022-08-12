@@ -14,6 +14,7 @@ serviceLabel: itemservice
 
 db:
   driver: mysql
+  serviceLabel: itemservice-mysql
   # host: itemservice-db
   # host: localhost
   host: host.docker.internal
@@ -25,6 +26,7 @@ db:
   dbName: itemservicedb
 
 redis:
+  serviceLabel: itemservice-redis
   host: itemservice-cache
   port: 6379
   # port: 6380
