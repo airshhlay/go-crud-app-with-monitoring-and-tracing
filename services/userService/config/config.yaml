@@ -1,5 +1,6 @@
 hostname: localhost
 port: 6000
+serviceLabel: userservice
 # running mysql locally (comment out)
 db:
   driver: mysql

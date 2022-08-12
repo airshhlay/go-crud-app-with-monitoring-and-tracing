@@ -8,6 +8,7 @@ import (
 type Config struct {
 	Hostname         string           `mapstructure:hostname`
 	Port             string           `mapstructure:port`
+	ServiceLabel     string           `mapstructure:serviceLabel`
 	DbConfig         DbConfig         `mapstructure:db`
 	PrometheusConfig PrometheusConfig `mapstructure:prometheus`
 }
