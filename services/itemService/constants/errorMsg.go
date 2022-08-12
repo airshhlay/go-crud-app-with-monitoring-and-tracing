@@ -15,4 +15,6 @@ const (
 	ERROR_MARSHAL_MSG             = "error_marshal"
 	ERROR_UNMARSHAL_MSG           = "error_unmarshal"
 	ERROR_TYPECAST_MSG            = "error_typecast"
+	ErrorPromHTTPServerMsg        = "error_prom_http_sever"
+	ErrorPromInitCustomMetricsMsg = "error_prom_init_custom_metrics"
 )

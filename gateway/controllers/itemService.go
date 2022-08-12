@@ -4,8 +4,11 @@ import (
 	client "gateway/client"
 	"gateway/config"
 	req "gateway/dto/request"
+	metrics "gateway/metrics"
 	proto "gateway/proto"
 	"strconv"
+
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -33,8 +36,33 @@ func NewItemServiceController(config *config.ItemServiceConfig, logger *zap.Logg
 }
 
 func (i *ItemServiceController) AddFavHandler(c *gin.Context) {
+	var errorCodeStr string
+	var errorCodeInt int
+
+	// observe request latency
+	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
+		metrics.RequestLatency.WithLabelValues(i.config.Label, c.Request.URL.Path, errorCodeStr).Observe(v)
+	}))
+
+	defer func() {
+		timer.ObserveDuration()
+	}()
+
+	// observe response size
+	responseSize := prometheus.ObserverFunc(func(v float64) {
+		metrics.ResponseSize.WithLabelValues(i.config.Label, c.Request.URL.Path, errorCodeStr)
+	})
+	defer func() {
+		responseSize.Observe(float64(c.Writer.Size()))
+	}()
+
 	userId := i.getUserId(c)
 	if userId == 0 {
+		errorCodeInt = 400
+		c.JSON(200, gin.H{
+			"errorCode": 400,
+			"errorMsg":  "invalid_user",
+		})
 		return
 	}
 
@@ -45,6 +73,7 @@ func (i *ItemServiceController) AddFavHandler(c *gin.Context) {
 			"error_request_binding",
 			zap.Error(err),
 		)
+		errorCodeInt = 400
 		c.JSON(200, gin.H{
 			"errorCode": 400,
 			"errorMsg":  "invalid_request",
@@ -63,6 +92,7 @@ func (i *ItemServiceController) AddFavHandler(c *gin.Context) {
 			zap.String("itemId", addFavReq.ItemId),
 			zap.Error(err),
 		)
+		errorCodeInt = 400
 		c.JSON(200, gin.H{
 			"errorCode": 400,
 			"errorMsg":  "invalid_request",
@@ -77,6 +107,7 @@ func (i *ItemServiceController) AddFavHandler(c *gin.Context) {
 			zap.String("shopId", addFavReq.ShopId),
 			zap.Error(err),
 		)
+		errorCodeInt = 400
 		c.JSON(200, gin.H{
 			"errorCode": 400,
 			"errorMsg":  "invalid_request",
@@ -93,15 +124,36 @@ func (i *ItemServiceController) AddFavHandler(c *gin.Context) {
 
 	clientAddFavRes, err := i.client.AddFav(c, clientAddFavReq)
 	if err != nil {
+		errorCodeInt = 500
 		c.JSON(500, "server_error")
 		return
 	}
+	errorCodeInt = int(clientAddFavRes.ErrorCode)
+
+	// errorCode, if any
+	errorCodeStr = strconv.Itoa(errorCodeInt)
 	c.IndentedJSON(200, clientAddFavRes)
 }
 
 func (i *ItemServiceController) DeleteFavHandler(c *gin.Context) {
+	var errorCodeStr string
+	var errorCodeInt int
+
+	// observe request latency
+	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
+		metrics.RequestLatency.WithLabelValues(i.config.Label, c.Request.URL.Path, errorCodeStr).Observe(v)
+	}))
+	defer func() {
+		timer.ObserveDuration()
+	}()
+
 	userId := i.getUserId(c)
 	if userId == 0 {
+		errorCodeInt = 400
+		c.JSON(200, gin.H{
+			"errorCode": 400,
+			"errorMsg":  "invalid_user",
+		})
 		return
 	}
 
@@ -109,17 +161,21 @@ func (i *ItemServiceController) DeleteFavHandler(c *gin.Context) {
 	itemId, err := strconv.ParseInt(c.Query(itemIdStr), 10, 64)
 	if err != nil {
 		i.logger.Error("error_query_params", zap.Error(err))
+		errorCodeInt = 400
 		c.JSON(200, gin.H{
 			"errorCode": 400,
 			"errorMsg":  "invalid_request",
 		})
+		return
 	}
 	shopId, err := strconv.ParseInt(c.Query(shopIdStr), 10, 64)
 	if err != nil {
+		errorCodeInt = 400
 		c.JSON(200, gin.H{
 			"errorCode": 400,
 			"errorMsg":  "invalid_request",
 		})
+		return
 	}
 
 	clientDeleteFavReq := &proto.DeleteFavReq{
@@ -130,15 +186,43 @@ func (i *ItemServiceController) DeleteFavHandler(c *gin.Context) {
 	}
 	clientDeleteFavRes, err := i.client.DeleteFav(c, clientDeleteFavReq)
 	if err != nil {
+		errorCodeInt = 500
 		c.JSON(500, "server_error")
 		return
 	}
+	errorCodeInt = int(clientDeleteFavRes.ErrorCode)
+	// errorCode, if any
+	errorCodeStr = strconv.Itoa(errorCodeInt)
 	c.IndentedJSON(200, clientDeleteFavRes)
 }
 
 func (i *ItemServiceController) GetFavListHandler(c *gin.Context) {
+	var errorCodeStr string
+	var errorCodeInt int
+
+	// observer request latency
+	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
+		metrics.RequestLatency.WithLabelValues(i.config.Label, c.Request.URL.Path, errorCodeStr).Observe(v)
+	}))
+	defer func() {
+		timer.ObserveDuration()
+	}()
+
+	// observe response size
+	responseSize := prometheus.ObserverFunc(func(v float64) {
+		metrics.ResponseSize.WithLabelValues(i.config.Label, c.Request.URL.Path, errorCodeStr).Observe(v)
+	})
+	defer func() {
+		responseSize.Observe(float64(c.Writer.Size()))
+	}()
+
 	userId := i.getUserId(c)
 	if userId == 0 {
+		errorCodeInt = 400
+		c.JSON(200, gin.H{
+			"errorCode": 400,
+			"errorMsg":  "invalid_user",
+		})
 		return
 	}
 
@@ -146,6 +230,7 @@ func (i *ItemServiceController) GetFavListHandler(c *gin.Context) {
 	page, err := strconv.Atoi(c.Query(pageStr))
 	if err != nil {
 		i.logger.Error("error_query_params", zap.Error(err))
+		errorCodeInt = 400
 		c.JSON(200, gin.H{
 			"errorCode": 400,
 			"errorMsg":  "invalid_request",
@@ -153,6 +238,7 @@ func (i *ItemServiceController) GetFavListHandler(c *gin.Context) {
 	}
 
 	if page < 0 {
+		errorCodeInt = 400
 		c.JSON(200, gin.H{
 			"errorCode": 400,
 			"errorMsg":  "invalid_request",
@@ -167,9 +253,13 @@ func (i *ItemServiceController) GetFavListHandler(c *gin.Context) {
 	}
 	clientGetFavListRes, err := i.client.GetFavList(c, clientGetFavListReq)
 	if err != nil {
+		errorCodeInt = 500
 		c.JSON(500, "server_error")
 		return
 	}
+	errorCodeInt = int(clientGetFavListRes.ErrorCode)
+	// errorCode, if any
+	errorCodeStr = strconv.Itoa(errorCodeInt)
 	c.IndentedJSON(200, clientGetFavListRes)
 }
 

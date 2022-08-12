@@ -1,13 +1,21 @@
 hostname: localhost
 port: 6000
+serviceLabel: userservice
 # running mysql locally (comment out)
 db:
   driver: mysql
-  host: userservice-db
+  # host: userservice-db
   # host: localhost
+  host: host.docker.internal
   port: 3306
   # port: 3307
   user: entrytask
   password: password
   net: tcp
   dbName: userservicedb
+
+prometheus:
+  host: localhost
+  port: 6001
+  endpoint: /metrics
+  

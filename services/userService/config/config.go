@@ -6,9 +6,11 @@ import (
 )
 
 type Config struct {
-	Hostname string   `mapstructure:hostname`
-	Port     string   `mapstructure:port`
-	DbConfig DbConfig `mapstructure:db`
+	Hostname         string           `mapstructure:hostname`
+	Port             string           `mapstructure:port`
+	ServiceLabel     string           `mapstructure:serviceLabel`
+	DbConfig         DbConfig         `mapstructure:db`
+	PrometheusConfig PrometheusConfig `mapstructure:prometheus`
 }
 
 type DbConfig struct {
@@ -58,6 +60,15 @@ func LoadConfig(logger *zap.Logger) (*Config, error) {
 	if err != nil {
 		logger.Fatal(
 			"Unable to unmarshal into dbconfig struct",
+			zap.Error(err),
+		)
+		return nil, err
+	}
+
+	err = viper.UnmarshalKey("prometheus", &config.PrometheusConfig)
+	if err != nil {
+		logger.Fatal(
+			"Unable to unmarshal into prometheusconfig struct",
 			zap.Error(err),
 		)
 		return nil, err

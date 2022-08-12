@@ -6,9 +6,8 @@ import (
 	config "userService/config"
 	constants "userService/constants"
 
-	"go.uber.org/zap"
-
 	"github.com/go-sql-driver/mysql"
+	"go.uber.org/zap"
 )
 
 type DbManager struct {

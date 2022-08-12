@@ -12,7 +12,7 @@ import (
 
 func main() {
 	// set logger
-	logger, err := NewLogger()
+	logger, err := newLogger()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func main() {
 	server.StartServer(config, dbManager, logger)
 }
 
-func NewLogger() (*zap.Logger, error) {
+func newLogger() (*zap.Logger, error) {
 	cfg := zap.NewProductionConfig()
 	cfg.OutputPaths = []string{
 		"./log/service.log", "stderr",

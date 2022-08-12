@@ -22,7 +22,7 @@ export default function Signup(props) {
               return setErrorMessage("Unexpected error occured. Please try again later!")
           }
         }
-        props.onAuthentication();
+        setErrorMessage("Successfully signed up. Please login.")
       })
       .catch((err) => {
         console.log(err)

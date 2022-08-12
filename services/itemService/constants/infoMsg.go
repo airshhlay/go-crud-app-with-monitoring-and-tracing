@@ -20,4 +20,6 @@ const (
 	// queries
 	INFO_ITEM_NOT_IN_FAVOURITES = "info_item_not_in_favourites"
 	INFO_ITEM_IN_FAVOURITES     = "info_item_in_favourites"
+
+	INFO_PROM_SERVER_START_MSG = "info_prom_sever_start"
 )

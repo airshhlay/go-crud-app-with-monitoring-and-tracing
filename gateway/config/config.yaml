@@ -2,12 +2,14 @@ hostname: localhost
 port: 5000
 ginMode: debug
 trustedProxies:
-  # - localhost:80
-  - frontend:80
+  - http://localhost:80
+allowedOrigins:
+  - http://localhost:80
 
-# configurations for incoming requests
+# config for incoming requests
 http:
   userService:
+    label: userservice
     host: localhost
     port: 6000
     secret: zhtq0eMHQpyQSZKV2ILyk2gXphHkMeCbBKNu5Xa5yhLHJwEahhcBWKP9to5WXRF
@@ -20,6 +22,7 @@ http:
         endpoint: /login
         method: post
   itemService:
+    label: itemservice
     host: localhost
     port: 7000
     urlGroup: /api/item
@@ -34,16 +37,22 @@ http:
         endpoint: /get/list
         method: get
 
-# config for routing requests to different services
+# config for routing requests to the different services
 grpc:
   userService:
-    label: userService_grpc
+    label: userservice
     # host: localhost
     host: userservice
     port: 6000
   itemService:
-    label: itemService_grpc
+    label: itemservice
     # host: localhost
     host: itemservice
     port: 7000
 
+prometheus:
+  host: localhost
+  port: 5000
+  endpoint: /metrics
+
+jaegar:

@@ -23,6 +23,7 @@ export default function ItemList(props) {
   const [totalPages, setTotalPages] = React.useState(0)
   const [currentPage, setCurrentPage] = React.useState(1)
   // fetch user's favourite items upon page load
+  const [errorMessage, setErrorMessage] = React.useState("")
   React.useEffect(() => {
     onRefresh();
   }, []);
@@ -72,7 +73,16 @@ export default function ItemList(props) {
   const onDelete = (tag, index) => {
     deleteItem(tag, index)
       .then((res) => {
-        showSuccessMsg("deleted!");
+        if (!res.errorCode) {
+          return setErrorMessage("Unexpected error occured. Please try again later!")
+        }
+        if (res.errorCode && res.errorCode !== -1) {
+          switch (res.errorCode) {
+            default:
+              return setErrorMessage("Unexpected error occured. Please try again later!")
+          }
+        }
+        // show success message TODO
         onRefresh();
       })
       .catch((err) => {

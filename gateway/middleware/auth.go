@@ -2,11 +2,17 @@ package middleware
 
 import (
 	"fmt"
+	config "gateway/config"
+	constants "gateway/constants"
+	res "gateway/dto/response"
+	metrics "gateway/metrics"
 	"net/http"
+	"strconv"
 
 	jwt "github.com/dgrijalva/jwt-go"
-
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
+	"go.uber.org/zap"
 )
 
 // Create a struct that will be encoded to a JWT.
@@ -16,27 +22,34 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
-func Authenticate(secret string) gin.HandlerFunc {
+func Authenticate(secret string, logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		fmt.Println("Went through authenticate middleware")
+		validationSuccess := false // label used for metrics
+		// observe latency
+		timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
+			metrics.AuthenticateDuration.WithLabelValues(strconv.FormatBool(validationSuccess)).Observe(v)
+		}))
+		defer func() {
+			timer.ObserveDuration()
+		}()
+
 		cookie, err := c.Request.Cookie("token")
 		if err != nil {
 			if err == http.ErrNoCookie {
-				fmt.Println("No cookie")
-				c.IndentedJSON(http.StatusUnauthorized, "unauthorised")
+				// no cookie sent with the request
+				logger.Info(constants.ERROR_NO_COOKIE_MSG, zap.Error(err))
+				c.IndentedJSON(http.StatusUnauthorized, res.GatewayResponse{ErrorCode: constants.ERROR_NO_COOKIE})
 				c.Abort()
 				return
 			}
-			fmt.Println(err)
-			c.IndentedJSON(http.StatusBadRequest, "bad request")
+			// other problem with the request
+			c.IndentedJSON(http.StatusBadRequest, res.GatewayResponse{ErrorCode: constants.ERROR_BAD_REQUEST})
 			c.Abort()
 			return
 		}
 		tokenString := cookie.Value
-		// tokenString, _ := c.Cookie("token")
-		fmt.Println("token: ", tokenString)
+		logger.Info("info_received_token", zap.String("token", tokenString))
 		claims := &Claims{}
-		fmt.Println(tokenString)
 
 		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte(secret), nil
@@ -56,6 +69,8 @@ func Authenticate(secret string) gin.HandlerFunc {
 			return
 		}
 
+		validationSuccess = true
+
 		if !token.Valid {
 			fmt.Println("token invalid")
 			c.IndentedJSON(http.StatusUnauthorized, "unauthorised")
@@ -68,9 +83,13 @@ func Authenticate(secret string) gin.HandlerFunc {
 	}
 }
 
-func CORSMiddleware() gin.HandlerFunc {
+func CORSMiddleware(config *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+		// c.Writer.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+		for _, v := range config.AllowedOrigins {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", v)
+		}
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://localhost:80")
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
 		c.Writer.Header().Set(

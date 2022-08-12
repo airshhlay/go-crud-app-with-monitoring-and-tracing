@@ -1,6 +1,7 @@
 hostname: localhost
 port: 7000
 maxPerPage: 5 # the number of items to display per page
+serviceLabel: itemservice
 # running mysql locally (comment out)
 # db:
 #   driver: mysql
@@ -13,7 +14,9 @@ maxPerPage: 5 # the number of items to display per page
 
 db:
   driver: mysql
-  host: itemservice-db
+  # host: itemservice-db
+  # host: localhost
+  host: host.docker.internal
   port: 3306
   # port: 3308
   user: entrytask
@@ -34,3 +37,9 @@ external:
     getItem:
       endpoint: https://shopee.sg/api/v4/item/get
       method: get
+
+prometheus:
+  host: localhost
+  port: 7001
+  endpoint: /metrics
+  
