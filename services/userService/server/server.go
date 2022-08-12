@@ -128,7 +128,7 @@ func (s *Server) StartServer(config *config.Config, dbManager *db.DbManager, log
 func (s *Server) Signup(ctx context.Context, req *pb.SignupReq) (*pb.SignupRes, error) {
 	errorCodeStr := "-1"
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-		metrics.DatabaseOpDuration.WithLabelValues(s.config.ServiceLabel, SIGNUP, GET_USER_BY_USERNAME_OP, errorCodeStr).Observe(v)
+		metrics.RequestDuration.WithLabelValues(s.config.ServiceLabel, SIGNUP, GET_USER_BY_USERNAME_OP, errorCodeStr).Observe(v)
 	}))
 
 	// observe duration at the end of this function
@@ -160,7 +160,7 @@ func (s *Server) Signup(ctx context.Context, req *pb.SignupReq) (*pb.SignupRes, 
 func (s *Server) Login(ctx context.Context, req *pb.LoginReq) (*pb.LoginRes, error) {
 	errorCodeStr := "-1"
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-		metrics.DatabaseOpDuration.WithLabelValues(s.config.ServiceLabel, LOGIN, GET_USER_BY_USERNAME_OP, errorCodeStr).Observe(v)
+		metrics.RequestDuration.WithLabelValues(s.config.ServiceLabel, LOGIN, GET_USER_BY_USERNAME_OP, errorCodeStr).Observe(v)
 	}))
 
 	// observe duration at the end of this function

@@ -12,7 +12,7 @@ var (
 	Reg *prometheus.Registry
 	// Create a customized counter metric.
 	TotalRequests              *prometheus.CounterVec
-	RequestLatency             *prometheus.HistogramVec
+	RequestDuration            *prometheus.HistogramVec
 	DatabaseOpDuration         *prometheus.HistogramVec
 	PasswordEncryptionDuration *prometheus.HistogramVec
 )
@@ -22,7 +22,7 @@ func init() {
 	Reg = prometheus.NewRegistry()
 
 	// request latency
-	RequestLatency = prometheus.NewHistogramVec(
+	RequestDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "grpc_request_duration_seconds",
 			Help:    "Measures the duration taken for each request",
@@ -50,5 +50,5 @@ func init() {
 	)
 
 	// register collectors
-	Reg.MustRegister(GrpcMetrics, RequestLatency, DatabaseOpDuration, PasswordEncryptionDuration)
+	Reg.MustRegister(GrpcMetrics, RequestDuration, DatabaseOpDuration, PasswordEncryptionDuration)
 }
