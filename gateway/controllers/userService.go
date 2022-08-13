@@ -67,8 +67,8 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 		return
 	}
 	u.logger.Info(
-		"info_request",
-		zap.Any("username", loginReq.Username),
+		constants.InfoUserServiceRequest,
+		zap.Any(constants.Username, loginReq.Username),
 	)
 
 	// construct the request to be made as a grpc client to user service
@@ -82,7 +82,7 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 	if err != nil {
 		u.removeCookie(c, constants.Token)
 		errorCodeInt = constants.ErrorUserserviceConnection
-		c.JSON(200, res.GatewayResponse{ErrorCode: errorCodeInt})
+		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ErrorUserserviceConnection})
 		return
 	}
 	if clientLoginRes.ErrorCode != -1 {
@@ -100,7 +100,7 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 			)
 			u.removeCookie(c, constants.Token)
 			errorCodeInt = constants.ErrorGenerateJWTToken
-			c.IndentedJSON(200, res.GatewayResponse{ErrorCode: errorCodeInt})
+			c.IndentedJSON(200, res.GatewayResponse{ErrorCode: constants.ErrorGenerateJWTToken})
 		} else {
 			// set jwt token in cookie
 			http.SetCookie(
@@ -119,13 +119,9 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 		ErrorCode: clientLoginRes.ErrorCode,
 		ErrorMsg:  clientLoginRes.ErrorMsg,
 	}
-	u.logger.Info(
-		"response",
-		zap.Any("res", clientLoginRes),
-	)
 	errorCodeInt = loginRes.ErrorCode
 
-	// errorCode, if any
+	// convert error code to string for metrics
 	errorCodeStr = strconv.Itoa(int(errorCodeInt))
 	c.IndentedJSON(200, loginRes)
 }
@@ -174,8 +170,8 @@ func (u *UserServiceController) SignupHandler(c *gin.Context) {
 		return
 	}
 	u.logger.Info(
-		"info_request",
-		zap.Any("request", signupReq),
+		constants.InfoUserServiceRequest,
+		zap.Any(constants.Request, signupReq),
 	)
 
 	// construct the request to be made as a grpc client to user service
@@ -188,7 +184,7 @@ func (u *UserServiceController) SignupHandler(c *gin.Context) {
 	if err != nil {
 		errorCodeInt = constants.ErrorUserserviceConnection
 		u.removeCookie(c, constants.Token)
-		c.JSON(200, res.GatewayResponse{ErrorCode: errorCodeInt})
+		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ErrorUserserviceConnection})
 		return
 	}
 	if clientLoginRes.ErrorCode != 0 {
@@ -196,7 +192,7 @@ func (u *UserServiceController) SignupHandler(c *gin.Context) {
 	}
 
 	errorCodeInt = clientLoginRes.ErrorCode
-	// errorCode, if any
+	// convert error code to string for metrics
 	errorCodeStr = strconv.Itoa(int(errorCodeInt))
 	c.JSON(200, clientLoginRes)
 }

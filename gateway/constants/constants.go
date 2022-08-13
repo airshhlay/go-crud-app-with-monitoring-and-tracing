@@ -17,4 +17,8 @@ const (
 	ShopID = "shopID"
 	// Page string
 	Page = "page"
+	// Request string
+	Request = "request"
+	// Username string
+	Username = "username"
 )

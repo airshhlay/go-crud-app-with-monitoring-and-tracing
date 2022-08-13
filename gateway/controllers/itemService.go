@@ -5,6 +5,7 @@ import (
 	"gateway/config"
 	"gateway/constants"
 	req "gateway/dto/request"
+	res "gateway/dto/response"
 	metrics "gateway/metrics"
 	proto "gateway/proto"
 	"strconv"
@@ -55,60 +56,47 @@ func (i *ItemServiceController) AddFavHandler(c *gin.Context) {
 
 	userID := i.getUserID(c)
 	if userID == 0 {
-		errorCodeInt = 400
-		c.JSON(200, gin.H{
-			"errorCode": 400,
-			"errorMsg":  "invalid_user",
-		})
+		errorCodeInt = constants.ErrorGetUserIDFromToken
 		return
 	}
 
 	var addFavReq req.AddFavReq
 	err := c.BindJSON(&addFavReq)
 	if err != nil {
-		i.logger.Error(
-			"error_request_binding",
+		i.logger.Info(
+			constants.ErrorInvalidRequestMsg,
 			zap.Error(err),
 		)
-		errorCodeInt = 400
-		c.JSON(200, gin.H{
-			"errorCode": 400,
-			"errorMsg":  "invalid_request",
-		})
+		errorCodeInt = constants.ErrorInvalidRequest
+		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ErrorInvalidRequest})
 		return
 	}
 	i.logger.Info(
-		"info_request",
-		zap.Any("request", addFavReq),
+		constants.InfoItemServiceRequest,
+		zap.Any(constants.Request, addFavReq),
 	)
 
 	itemID, err := strconv.ParseInt(addFavReq.ItemID, 10, 64)
 	if err != nil {
 		i.logger.Error(
-			"error_type_conversion",
-			zap.String("itemID", addFavReq.ItemID),
+			constants.ErrorParseIntMsg,
+			zap.String(constants.ItemID, addFavReq.ItemID),
 			zap.Error(err),
 		)
-		errorCodeInt = 400
-		c.JSON(200, gin.H{
-			"errorCode": 400,
-			"errorMsg":  "invalid_request",
-		})
+		errorCodeInt = constants.ErrorParseInt
+		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ErrorParseInt})
 		return
 	}
 
 	shopID, err := strconv.ParseInt(addFavReq.ShopID, 10, 64)
 	if err != nil {
 		i.logger.Error(
-			"error_type_conversion",
-			zap.String("shopID", addFavReq.ShopID),
+			constants.ErrorParseIntMsg,
+			zap.String(constants.ShopID, addFavReq.ShopID),
 			zap.Error(err),
 		)
-		errorCodeInt = 400
-		c.JSON(200, gin.H{
-			"errorCode": 400,
-			"errorMsg":  "invalid_request",
-		})
+		errorCodeInt = constants.ErrorParseInt
+		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ErrorParseInt})
 		return
 	}
 
@@ -122,13 +110,13 @@ func (i *ItemServiceController) AddFavHandler(c *gin.Context) {
 	// call item service
 	clientAddFavRes, err := i.client.AddFav(c, clientAddFavReq)
 	if err != nil {
-		errorCodeInt = 500
-		c.JSON(500, "server_error")
+		errorCodeInt = constants.ErrorItemserviceConnection
+		c.JSON(500, res.GatewayResponse{ErrorCode: constants.ErrorItemserviceConnection})
 		return
 	}
 	errorCodeInt = int(clientAddFavRes.ErrorCode)
 
-	// errorCode, if any
+	// convert error code to string for metrics label
 	errorCodeStr = strconv.Itoa(errorCodeInt)
 	c.IndentedJSON(200, clientAddFavRes)
 }
@@ -148,32 +136,31 @@ func (i *ItemServiceController) DeleteFavHandler(c *gin.Context) {
 
 	userID := i.getUserID(c)
 	if userID == 0 {
-		errorCodeInt = 400
-		c.JSON(200, gin.H{
-			"errorCode": 400,
-			"errorMsg":  "invalid_user",
-		})
+		errorCodeInt = constants.ErrorGetUserIDFromToken
 		return
 	}
 
 	// retrieve query params
 	itemID, err := strconv.ParseInt(c.Query(constants.ItemID), 10, 64)
 	if err != nil {
-		i.logger.Error("error_query_params", zap.Error(err))
-		errorCodeInt = 400
-		c.JSON(200, gin.H{
-			"errorCode": 400,
-			"errorMsg":  "invalid_request",
-		})
+		i.logger.Error(
+			constants.ErrorParseIntMsg,
+			zap.String(constants.ItemID, c.Query(constants.ItemID)),
+			zap.Error(err),
+		)
+		errorCodeInt = constants.ErrorParseInt
+		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ErrorParseInt})
 		return
 	}
 	shopID, err := strconv.ParseInt(c.Query(constants.ShopID), 10, 64)
 	if err != nil {
-		errorCodeInt = 400
-		c.JSON(200, gin.H{
-			"errorCode": 400,
-			"errorMsg":  "invalid_request",
-		})
+		i.logger.Error(
+			constants.ErrorParseIntMsg,
+			zap.String(constants.ShopID, c.Query(constants.ShopID)),
+			zap.Error(err),
+		)
+		errorCodeInt = constants.ErrorParseInt
+		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ErrorParseInt})
 		return
 	}
 
@@ -186,12 +173,13 @@ func (i *ItemServiceController) DeleteFavHandler(c *gin.Context) {
 	// call item service
 	clientDeleteFavRes, err := i.client.DeleteFav(c, clientDeleteFavReq)
 	if err != nil {
-		errorCodeInt = 500
-		c.JSON(500, "server_error")
+		errorCodeInt = constants.ErrorItemserviceConnection
+		c.JSON(500, res.GatewayResponse{ErrorCode: constants.ErrorItemserviceConnection})
 		return
 	}
+
 	errorCodeInt = int(clientDeleteFavRes.ErrorCode)
-	// errorCode, if any
+	// convert error code to string for metrics
 	errorCodeStr = strconv.Itoa(errorCodeInt)
 	c.IndentedJSON(200, clientDeleteFavRes)
 }
@@ -219,31 +207,26 @@ func (i *ItemServiceController) GetFavListHandler(c *gin.Context) {
 
 	userID := i.getUserID(c)
 	if userID == 0 {
-		errorCodeInt = 400
-		c.JSON(200, gin.H{
-			"errorCode": 400,
-			"errorMsg":  "invalid_user",
-		})
+		errorCodeInt = constants.ErrorGetUserIDFromToken
 		return
 	}
 
 	// retrieve query params
 	page, err := strconv.Atoi(c.Query(constants.Page))
 	if err != nil {
-		i.logger.Error("error_query_params", zap.Error(err))
-		errorCodeInt = 400
-		c.JSON(200, gin.H{
-			"errorCode": 400,
-			"errorMsg":  "invalid_request",
-		})
+		i.logger.Error(
+			constants.ErrorParseIntMsg,
+			zap.String(constants.Page, c.Query(constants.Page)),
+			zap.Error(err),
+		)
+		errorCodeInt = constants.ErrorParseInt
+		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ErrorParseInt})
+		return
 	}
 
 	if page < 0 {
-		errorCodeInt = 400
-		c.JSON(200, gin.H{
-			"errorCode": 400,
-			"errorMsg":  "invalid_request",
-		})
+		errorCodeInt = constants.ErrorInvalidRequest
+		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ErrorInvalidRequest})
 		return
 	}
 
@@ -255,8 +238,8 @@ func (i *ItemServiceController) GetFavListHandler(c *gin.Context) {
 	// call item service
 	clientGetFavListRes, err := i.client.GetFavList(c, clientGetFavListReq)
 	if err != nil {
-		errorCodeInt = 500
-		c.JSON(500, "server_error")
+		errorCodeInt = constants.ErrorItemserviceConnection
+		c.JSON(500, res.GatewayResponse{ErrorCode: constants.ErrorItemserviceConnection})
 		return
 	}
 	errorCodeInt = int(clientGetFavListRes.ErrorCode)
@@ -269,17 +252,15 @@ func (i *ItemServiceController) getUserID(c *gin.Context) int64 {
 	userIDRaw, exists := c.Get(constants.UserID)
 
 	if !exists {
-		i.logger.Error("error_no_user_id")
-		c.JSON(200, gin.H{
-			"errorCode": 400,
-			"errorMsg":  "invalid_login_request",
-		})
+		i.logger.Error(constants.ErrorNoUserIDInTokenMsg)
+		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ErrorNoUserIDInToken})
 		return 0
 	}
 
 	userID, err := strconv.ParseInt(userIDRaw.(string), 10, 64)
 	if err != nil {
-		i.logger.Error("error_parse_int", zap.Error(err))
+		i.logger.Error(constants.ErrorParseIntMsg, zap.Error(err))
+		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ErrorGetUserIDFromToken})
 		return 0
 	}
 	return userID

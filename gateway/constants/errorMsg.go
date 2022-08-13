@@ -35,4 +35,10 @@ const (
 	ErrorJWTSignatureInvalidMsg = "error_jwt_signature_invalid"
 	// ErrorUnexpectedJWTErr service error message
 	ErrorUnexpectedJWTErr = "error_unexpected_jwt_err"
+	// ErrorGetUserIDFromTokenMsg service error message
+	ErrorGetUserIDFromTokenMsg = "error_get_userid_from_token"
+	// ErrorNoUserIDInTokenMsg service error message
+	ErrorNoUserIDInTokenMsg = "error_no_userid_in_token"
+	// ErrorParseIntMsg service error message
+	ErrorParseIntMsg = "error_parse_int"
 )
