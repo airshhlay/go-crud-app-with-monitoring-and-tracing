@@ -1,11 +1,13 @@
 package request
 
+// AddFavReq defines the expected request body to AddFav
 type AddFavReq struct {
-	ItemId string `json:"itemId"`
-	ShopId string `json:"shopId"`
+	ItemID string `json:"itemID"`
+	ShopID string `json:"shopID"`
 }
 
+// DeleteFavReq defines the expected request body to DeleteFav
 type DeleteFavReq struct {
-	ItemId int64 `json:"itemId"`
-	ShopId int64 `json:"shopId"`
+	ItemID int64 `json:"itemID"`
+	ShopID int64 `json:"shopID"`
 }

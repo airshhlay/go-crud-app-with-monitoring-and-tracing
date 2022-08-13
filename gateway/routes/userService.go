@@ -7,7 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func UserServiceRoutes(g *gin.RouterGroup, controller *controllers.UserServiceController, apis *config.UserServiceApis) {
+// UserServiceRoutes defines routes used by the user service.
+func UserServiceRoutes(g *gin.RouterGroup, controller *controllers.UserServiceController, apis *config.UserServiceAPIs) {
 	g.POST(apis.Signup.Endpoint, controller.SignupHandler)
 	g.POST(apis.Login.Endpoint, controller.LoginHandler)
 }

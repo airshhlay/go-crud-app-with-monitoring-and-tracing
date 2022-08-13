@@ -4,33 +4,30 @@ package constants
 const (
 	// 400 errors
 	// user parameters
-	ERROR_BAD_REQUEST     = 140011
-	ERROR_NO_COOKIE       = 140012
-	ERROR_INVALID_REQUEST = 140013
+
+	// ErrorBadRequest service error code
+	ErrorBadRequest = 140011
+	// ErrorNoCookie service error code
+	ErrorNoCookie = 140012
+	// ErrorInvalidRequest service error code
+	ErrorInvalidRequest = 140013
 
 	// 401 errors
-	ERROR_UNAUTHORIZED          = 140111
-	ERROR_TOKEN_INVALID         = 140112
-	ERROR_JWT_SIGNATURE_INVALID = 140113
+	// ErrorUnauthorized service error code
+	ErrorUnauthorized = 140111
+	// ErrorTokenInvalid service error code
+	ErrorTokenInvalid = 140112
 
 	// 500 errors
 	// server errors
-	ERROR_USERSERVICE_CONNECTION = 150011
-	// database errors
-	ERROR_DATABASE            = 150011
-	ERROR_DATABASE_INSERT     = 150012
-	ERROR_DATABASE_QUERY      = 150013
-	ERROR_DATABASE_CONNECTION = 150014
 
-	// encryption errors
-	ERROR_PASSWORD_ENCRYPTION = 150021
+	// ErrorUserserviceConnection service error code
+	ErrorUserserviceConnection = 150011
 
-	// typecasting
-	ERROR_TYPECAST = 150031
+	// JWT errors
 
-	// prometheus
-	ERROR_PROM_INIT_CUSTOM_METRICS = 150041
-
-	// token errors
-	ERROR_GENERATE_JWT_TOKEN = 150051
+	// ErrorJWTSignatureInvalid service error code
+	ErrorJWTSignatureInvalid = 150021
+	// ErrorGenerateJWTToken service error code
+	ErrorGenerateJWTToken = 150022
 )

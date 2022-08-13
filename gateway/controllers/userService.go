@@ -7,6 +7,7 @@ import (
 	req "gateway/dto/request"
 	res "gateway/dto/response"
 	metrics "gateway/metrics"
+	"gateway/middleware"
 	proto "gateway/proto"
 	"net/http"
 	"strconv"
@@ -23,19 +24,14 @@ const (
 	token = "token"
 )
 
+// UserServiceController is called to handle incoming HTTP requests directed to the user service.
 type UserServiceController struct {
 	config *config.UserServiceConfig
 	logger *zap.Logger
 	client *client.UserServiceClient
 }
 
-// Create a struct that will be encoded to a JWT.
-// We add jwt.StandardClaims as an embedded type, to provide fields like expiry time
-type Claims struct {
-	UserId string `json:"userId"`
-	jwt.StandardClaims
-}
-
+// NewUserServiceController returns a UserServiceController.
 func NewUserServiceController(config *config.UserServiceConfig, logger *zap.Logger, client *client.UserServiceClient) *UserServiceController {
 	return &UserServiceController{
 		config,
@@ -44,6 +40,7 @@ func NewUserServiceController(config *config.UserServiceConfig, logger *zap.Logg
 	}
 }
 
+// LoginHandler handles requests to the /user/login endpoint.
 func (u *UserServiceController) LoginHandler(c *gin.Context) {
 	var errorCodeStr string
 	var errorCodeInt int32
@@ -61,11 +58,11 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 	err := c.BindJSON(&loginReq)
 	if err != nil {
 		u.logger.Error(
-			constants.ERROR_BAD_REQUEST_MSG,
+			constants.ErrorBadRequestMsg,
 			zap.Error(err),
 		)
-		u.removeCookie(c, token)
-		errorCodeInt = constants.ERROR_BAD_REQUEST
+		u.removeCookie(c, constants.Token)
+		errorCodeInt = constants.ErrorBadRequest
 		c.JSON(200, res.GatewayResponse{ErrorCode: errorCodeInt})
 		return
 	}
@@ -74,40 +71,41 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 		zap.Any("username", loginReq.Username),
 	)
 
+	// construct the request to be made as a grpc client to user service
 	clientLoginReq := &proto.LoginReq{
 		Username: loginReq.Username,
 		Password: loginReq.Password,
 	}
 
-	// err if issue with client connection
+	// call user service
 	clientLoginRes, err := u.client.Login(c, clientLoginReq)
 	if err != nil {
-		u.removeCookie(c, token)
-		errorCodeInt = constants.ERROR_USERSERVICE_CONNECTION
+		u.removeCookie(c, constants.Token)
+		errorCodeInt = constants.ErrorUserserviceConnection
 		c.JSON(200, res.GatewayResponse{ErrorCode: errorCodeInt})
 		return
 	}
 	if clientLoginRes.ErrorCode != -1 {
 		// remove any credentials if there is a login error
-		u.removeCookie(c, token)
+		u.removeCookie(c, constants.Token)
 	}
 
-	if clientLoginRes.UserId != 0 {
+	if clientLoginRes.UserID != 0 {
 		// no error occured
-		tokenString, expirationTime, err := u.generateToken(clientLoginRes.UserId)
+		tokenString, expirationTime, err := u.generateToken(clientLoginRes.UserID)
 		if err != nil {
 			u.logger.Error(
-				constants.ERROR_GENERATE_JWT_TOKEN_MSG,
+				constants.ErrorGenerateJWTTokenMsg,
 				zap.Error(err),
 			)
-			u.removeCookie(c, token)
-			errorCodeInt = constants.ERROR_GENERATE_JWT_TOKEN
+			u.removeCookie(c, constants.Token)
+			errorCodeInt = constants.ErrorGenerateJWTToken
 			c.IndentedJSON(200, res.GatewayResponse{ErrorCode: errorCodeInt})
 		} else {
 			// set jwt token in cookie
 			http.SetCookie(
 				c.Writer, &http.Cookie{
-					Name:     "token",
+					Name:     constants.Token,
 					Value:    tokenString,
 					Expires:  expirationTime,
 					HttpOnly: true,
@@ -132,10 +130,11 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 	c.IndentedJSON(200, loginRes)
 }
 
-func (u *UserServiceController) generateToken(userId int64) (string, time.Time, error) {
+// generateToken is a helper function to generate the JWT token for an authenticated user's session.
+func (u *UserServiceController) generateToken(userID int64) (string, time.Time, error) {
 	expirationTime := time.Now().Add(30 * time.Minute)
-	claims := &Claims{
-		UserId: strconv.FormatInt(userId, 10),
+	claims := &middleware.Claims{
+		UserID: strconv.FormatInt(userID, 10),
 		StandardClaims: jwt.StandardClaims{
 			// In JWT, the expiry time is expressed as unix milliseconds
 			ExpiresAt: expirationTime.Unix(),
@@ -146,6 +145,7 @@ func (u *UserServiceController) generateToken(userId int64) (string, time.Time, 
 	return tokenString, expirationTime, err
 }
 
+// SignupHandler handles incoming requests to the /user/signup endpoint.
 func (u *UserServiceController) SignupHandler(c *gin.Context) {
 	var errorCodeStr string
 	var errorCodeInt int32
@@ -159,18 +159,18 @@ func (u *UserServiceController) SignupHandler(c *gin.Context) {
 	}()
 
 	// remove any token cookies
-	u.removeCookie(c, token)
+	u.removeCookie(c, constants.Token)
 
 	var signupReq req.SignupReq
 	err := c.BindJSON(&signupReq)
 	if err != nil {
 		u.logger.Info(
-			constants.ERROR_BAD_REQUEST_MSG,
+			constants.ErrorBadRequestMsg,
 			zap.Error(err),
 		)
-		u.removeCookie(c, token)
-		errorCodeInt = constants.ERROR_BAD_REQUEST
-		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ERROR_BAD_REQUEST})
+		u.removeCookie(c, constants.Token)
+		errorCodeInt = constants.ErrorBadRequest
+		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ErrorBadRequest})
 		return
 	}
 	u.logger.Info(
@@ -178,20 +178,21 @@ func (u *UserServiceController) SignupHandler(c *gin.Context) {
 		zap.Any("request", signupReq),
 	)
 
+	// construct the request to be made as a grpc client to user service
 	clientSignupReq := &proto.SignupReq{
 		Username: signupReq.Username,
 		Password: signupReq.Password,
 	}
-	// err if issue with client connection
+	// call user service
 	clientLoginRes, err := u.client.Signup(c, clientSignupReq)
 	if err != nil {
-		errorCodeInt = constants.ERROR_USERSERVICE_CONNECTION
-		u.removeCookie(c, token)
+		errorCodeInt = constants.ErrorUserserviceConnection
+		u.removeCookie(c, constants.Token)
 		c.JSON(200, res.GatewayResponse{ErrorCode: errorCodeInt})
 		return
 	}
 	if clientLoginRes.ErrorCode != 0 {
-		u.removeCookie(c, token)
+		u.removeCookie(c, constants.Token)
 	}
 
 	errorCodeInt = clientLoginRes.ErrorCode
@@ -200,6 +201,7 @@ func (u *UserServiceController) SignupHandler(c *gin.Context) {
 	c.JSON(200, clientLoginRes)
 }
 
+// removeCookie is a helper function to remove the http cookie with cookieName from the client side.
 func (u *UserServiceController) removeCookie(c *gin.Context, cookieName string) {
 	// set jwt token in cookie
 	http.SetCookie(

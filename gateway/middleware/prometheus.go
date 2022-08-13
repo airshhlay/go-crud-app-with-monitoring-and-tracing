@@ -8,6 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// PrometheusMiddleware increments the TotalRequests metric.
 func PrometheusMiddleware(config *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// increment the total number of requests

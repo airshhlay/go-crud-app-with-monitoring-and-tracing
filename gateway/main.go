@@ -8,6 +8,9 @@ import (
 	metrics "gateway/metrics"
 	middleware "gateway/middleware"
 	routes "gateway/routes"
+	jaegerTracer "gateway/tracing"
+
+	opentracing "github.com/opentracing/opentracing-go"
 
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -20,13 +23,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// GrpcClients struct holds references to the user service grpc client and item service grpc client
 type GrpcClients struct {
 	UserServiceClient *client.UserServiceClient
 	ItemServiceClient *client.ItemServiceClient
 }
 
 func main() {
-	logger, err := zap.NewProduction()
+	logger, err := newLogger()
 	if err != nil {
 		panic(err)
 	}
@@ -36,17 +40,25 @@ func main() {
 		panic(err)
 	}
 
-	// cleanup := tracing.InitTracer()
+	// init jaeger
+	tracer, closer, err := jaegerTracer.InitJaeger(&config.JaegerConfig, logger)
+	if err != nil {
+		panic(err)
+	}
+	opentracing.SetGlobalTracer(tracer)
+	logger.Info(constants.InfoJaegerInit)
+	defer closer.Close()
 
 	// initialise metrics metrics
 	metrics.Init()
 	// start the grpc server
 	clients := StartGrpcClients(logger, config)
 	// start http server
-	StartHttpServer(logger, config, clients)
+	StartHTTPServer(logger, config, clients)
 }
 
-func StartHttpServer(logger *zap.Logger, config *config.Config, clients *GrpcClients) {
+// StartHTTPServer initialise necessary middleware, item service, user service and metrics routes, and starts the HTTP server.
+func StartHTTPServer(logger *zap.Logger, config *config.Config, clients *GrpcClients) {
 	if config.GinMode == "release" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -65,65 +77,53 @@ func StartHttpServer(logger *zap.Logger, config *config.Config, clients *GrpcCli
 	server.GET(config.PrometheusConfig.Endpoint, metrics.PrometheusHandler())
 
 	// Routes for User Service
-	userServiceGroup := server.Group(config.HttpConfig.UserService.UrlGroup)
-	userServiceController := controllers.NewUserServiceController(&config.HttpConfig.UserService, logger, clients.UserServiceClient)
+	userServiceGroup := server.Group(config.HTTPConfig.UserService.URLGroup)
+	userServiceController := controllers.NewUserServiceController(&config.HTTPConfig.UserService, logger, clients.UserServiceClient)
 	userServiceGroup.Use(middleware.PrometheusMiddleware(config)) // use prometheus middleware
-	routes.UserServiceRoutes(userServiceGroup, userServiceController, &config.HttpConfig.UserService.Apis)
+	routes.UserServiceRoutes(userServiceGroup, userServiceController, &config.HTTPConfig.UserService.APIs)
 
 	// Routes for Item Service
-	itemServiceGroup := server.Group(config.HttpConfig.ItemService.UrlGroup)
-	itemServiceController := controllers.NewItemServiceController(&config.HttpConfig.ItemService, logger, clients.ItemServiceClient)
-	itemServiceGroup.Use(middleware.Authenticate(config.HttpConfig.UserService.Secret, logger)) // authenticate requests to item service
+	itemServiceGroup := server.Group(config.HTTPConfig.ItemService.URLGroup)
+	itemServiceController := controllers.NewItemServiceController(&config.HTTPConfig.ItemService, logger, clients.ItemServiceClient)
+	itemServiceGroup.Use(middleware.Authenticate(config.HTTPConfig.UserService.Secret, logger)) // authenticate requests to item service
 	itemServiceGroup.Use(middleware.PrometheusMiddleware(config))                               // use prometheus middleware
-	routes.ItemServiceRoutes(itemServiceGroup, itemServiceController, &config.HttpConfig.ItemService.Apis)
+	routes.ItemServiceRoutes(itemServiceGroup, itemServiceController, &config.HTTPConfig.ItemService.APIs)
 
-	// server.Use(cors.Default())
-	// server.Use(middleware.CORSMiddleware())
-	// server.Use(cors.New(cors.Config{
-	// 	AllowOrigins:     []string{"http://localhost:3000"},
-	// 	AllowMethods:     []string{"GET, POST, PUT, DELETE"},
-	// 	AllowHeaders:     []string{"Origin"},
-	// 	ExposeHeaders:    []string{"Content-Length"},
-	// 	AllowCredentials: true,
-	// 	MaxAge:           12 * time.Hour,
-	// }))
 	err := server.Run(fmt.Sprintf(":%s", config.Port))
 	if err != nil {
 		logger.Fatal(
-			constants.ERROR_SERVER_START_FAIL_MSG,
+			constants.ErrorServerStartFailMsg,
 			zap.Error(err),
 		)
 		panic(err)
 	}
 
 	logger.Info(
-		"info_http_rest_server_start",
+		constants.InfoInfoHTTPServerStart,
 		zap.String("port", config.Port),
 	)
 }
 
+// StartGrpcClients starts the grpc client connections to the microservice grpc servers. It returns a reference to the GrpcClients struct.
 func StartGrpcClients(logger *zap.Logger, config *config.Config) *GrpcClients {
 	generalOpts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	// user service client
 	userServiceClient := client.GetUserServiceClient(logger, &config.GrpcConfig.UserService)
-	// var userServiceOpts []grpc.DialOption
-	userServiceOpts := generalOpts
-	err := userServiceClient.StartClient(userServiceOpts)
+	err := userServiceClient.StartClient(generalOpts)
 	if err != nil {
 		logger.Fatal(
-			"error_server_failure",
+			constants.ErrorGrpcClientStartFailMsg,
 			zap.Error(err),
 		)
 		panic(err)
 	}
 
-	// var itemServiceOpts []grpc.DialOption
-	itemServiceOpts := generalOpts
+	// item service client
 	itemServiceClient := client.GetItemServiceClient(logger, &config.GrpcConfig.ItemService)
-	err = itemServiceClient.StartClient(itemServiceOpts)
+	err = itemServiceClient.StartClient(generalOpts)
 	if err != nil {
 		logger.Fatal(
-			"error_server_failure",
+			constants.ErrorGrpcClientStartFailMsg,
 			zap.Error(err),
 		)
 		panic(err)
@@ -133,4 +133,12 @@ func StartGrpcClients(logger *zap.Logger, config *config.Config) *GrpcClients {
 		UserServiceClient: userServiceClient,
 		ItemServiceClient: itemServiceClient,
 	}
+}
+
+func newLogger() (*zap.Logger, error) {
+	cfg := zap.NewProductionConfig()
+	cfg.OutputPaths = []string{
+		"./log/service.log", "stderr",
+	}
+	return cfg.Build()
 }

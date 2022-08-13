@@ -55,4 +55,7 @@ prometheus:
   port: 5000
   endpoint: /metrics
 
-jaegar:
+jaeger:
+  host: localhost:6831
+  serviceName: gateway
+  logSpans: true
