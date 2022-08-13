@@ -109,9 +109,9 @@ export default function ItemList(props) {
       console.log("Not shopee link format")
       showFailureMsg("Incorrect format!")
     } else {
-      var itemId = matches[2]
-      var shopId = matches[1]
-      submitItem(itemId, shopId)
+      var itemID = matches[2]
+      var shopID = matches[1]
+      submitItem(itemID, shopID)
         .then((res) => {
           if (res.errorCode && res.errorCode != -1) {
             switch (res.errorCode) {
@@ -151,7 +151,7 @@ export default function ItemList(props) {
           {data &&
             data.map((item) => {
               return (
-                <Card key={`${item.itemId}`} style={{
+                <Card key={`${item.itemID}`} style={{
                   borderStyle: "solid"
                 }}>
                   <Row>
@@ -162,7 +162,7 @@ export default function ItemList(props) {
                     <Col span={2}>
                       <Button
                         style={{ backgroundColor: "lightblue" }}
-                        onClick={() => onDelete(item.itemId, item.shopId)}
+                        onClick={() => onDelete(item.itemID, item.shopID)}
                       >
                         <DeleteFilled />
                       </Button>
