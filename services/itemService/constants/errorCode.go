@@ -4,31 +4,53 @@ package constants
 const (
 	// 400 errors
 	// user parameters
-	ERROR_ITEM_IN_FAVOURITES = 340011
+
+	// ErrorItemInFavourites service error code
+	ErrorItemInFavourites = 340011
 
 	// 500 errors
 	// server errors
-	ERROR_SERVER_START_FAIL = 350021
-	// database errors
-	ERROR_DATABASE            = 350011
-	ERROR_DATABASE_INSERT     = 350012
-	ERROR_DATABASE_QUERY      = 350013
-	ERROR_DATABASE_CONNECTION = 350014
-	ERROR_DATABASE_DELETE     = 350015
 
-	ERROR_REDIS            = 350021
-	ERROR_REDIS_CONNECTION = 350022
-	ERROR_REDIS_GET        = 350023
-	ERROR_REDIS_SET        = 350024
+	// ErrorServerStartFail service error code
+	ErrorServerStartFail = 350021
+	// database errors
+
+	// ErrorDatabase service error code
+	ErrorDatabase = 350011
+	// ErrorDatabaseInsert service error code
+	ErrorDatabaseInsert = 350012
+	// ErrorDatabaseQuery service error code
+	ErrorDatabaseQuery = 350013
+	// ErrorDatabaseConnection service error code
+	ErrorDatabaseConnection = 350014
+	// ErrorDatabaseDelete service error code
+	ErrorDatabaseDelete = 350015
+
+	// ErrorRedis service error code
+	ErrorRedis = 350021
+	// ErrorRedisConnection service error code
+	ErrorRedisConnection = 350022
+	// ErrorRedisGet service error code
+	ErrorRedisGet = 350023
+	// ErrorRedisSet service error code
+	ErrorRedisSet = 350024
 
 	// external calls
-	ERROR_EXTERNAL_API_CALL        = 350031
-	ERROR_EXTERNAL_SHOPEE_API_CALL = 350032
+
+	// ErrorExternalAPICall service error code
+	ErrorExternalAPICall = 350031
+	// ErrorExternalShopeeAPICall service error code
+	ErrorExternalShopeeAPICall = 350032
 
 	// marshalling and unmarshalling
-	ERROR_MARSHAL   = 350041
-	ERROR_UNMARSHAL = 350042
+
+	// ErrorMarshal service error code
+	ErrorMarshal = 350041
+	// ErrorUnmarshal service error code
+	ErrorUnmarshal = 350042
 
 	// typecasting
-	ERROR_TYPECAST = 350051
+
+	// ErrorTypecast service error code
+	ErrorTypecast = 350051
 )

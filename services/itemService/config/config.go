@@ -5,6 +5,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Config struct to hold main configuration from config.yaml
 type Config struct {
 	Hostname         string           `mapstructure:hostname`
 	Port             string           `mapstructure:port`
@@ -16,6 +17,7 @@ type Config struct {
 	PrometheusConfig PrometheusConfig `mapstructure:prometheus`
 }
 
+// DbConfig holds configurations for the database.
 type DbConfig struct {
 	ServiceLabel string `mapstructure:"serviceLabel"`
 	Driver       string `mapstructure:driver`
@@ -27,6 +29,7 @@ type DbConfig struct {
 	Password     string `mapstructure:password`
 }
 
+// RedisConfig holds configurations for redis
 type RedisConfig struct {
 	ServiceLabel string `mapstructure:"serviceLabel"`
 	Host         string `mapstructure:host`
@@ -36,19 +39,23 @@ type RedisConfig struct {
 	Expire       int    `mapstructure:expire`
 }
 
+// ExternalConfig holds configurations for external services
 type ExternalConfig struct {
 	Shopee Shopee `mapstructure:shopee`
 }
 
+// Shopee holds config for external requests to Shopee
 type Shopee struct {
-	GetItem Api `mapstructure:getItem`
+	GetItem API `mapstructure:getItem`
 }
 
-type Api struct {
+// API defines a HTTP endpoint used when making external requests
+type API struct {
 	Endpoint string `mapstructure:endpoint`
 	Method   string `mapstructure:method`
 }
 
+// LoadConfig is called in main.go to load all config
 func LoadConfig(logger *zap.Logger) (*Config, error) {
 	viper.AddConfigPath("/app/config")
 	viper.AddConfigPath("/app/itemService/config")

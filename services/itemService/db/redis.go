@@ -14,6 +14,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// RedisManager is a struct containing a reference to the redis client, logger, and the redis config
 type RedisManager struct {
 	client *redis.Client
 	config *config.RedisConfig
@@ -27,6 +28,7 @@ const (
 	falseStr      = "false"
 )
 
+// InitRedis creates the redis client, initialises and tests the connection
 func InitRedis(redisConfig *config.RedisConfig, logger *zap.Logger) (*RedisManager, error) {
 	cfg := redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", redisConfig.Host, redisConfig.Port),
@@ -39,15 +41,15 @@ func InitRedis(redisConfig *config.RedisConfig, logger *zap.Logger) (*RedisManag
 	pong, err := client.Ping().Result()
 	if err != nil {
 		logger.Fatal(
-			constants.ERROR_REDIS_CONNECTION_MSG,
-			zap.Int32("errorCode", constants.ERROR_REDIS_CONNECTION),
+			constants.ErrorRedisConnectionMsg,
+			zap.Int32("errorCode", constants.ErrorRedisConnection),
 			zap.Error(err),
 		)
 		return nil, err
 	}
 
 	logger.Info(
-		constants.INFO_REDIS_CONNECT_SUCCESS,
+		constants.InfoRedisConnectSuccess,
 		zap.String("pong", pong),
 	)
 
@@ -60,6 +62,7 @@ func InitRedis(redisConfig *config.RedisConfig, logger *zap.Logger) (*RedisManag
 	return &redisManager, err
 }
 
+// Set takes a key of type string and a byte array as a value. exp is used to define an expiry.
 func (rm *RedisManager) Set(key string, bytes []byte, exp time.Duration) error {
 	successStr := trueStr
 	// time redis op
@@ -74,18 +77,18 @@ func (rm *RedisManager) Set(key string, bytes []byte, exp time.Duration) error {
 	err := rm.client.Set(key, bytes, exp).Err()
 	if err != nil {
 		rm.logger.Error(
-			constants.ERROR_REDIS_SET_MSG,
+			constants.ErrorRedisSetMsg,
 			zap.String("key", key),
 			zap.ByteString("bytes", bytes),
 			zap.Error(err),
 		)
 		// if error, set success to false
 		successStr = falseStr
-		return errors.Error{constants.ERROR_REDIS_SET, constants.ERROR_REDIS_SET_MSG, err}
+		return errors.Error{constants.ErrorRedisSet, constants.ErrorRedisSetMsg, err}
 	}
 
 	rm.logger.Info(
-		constants.INFO_REDIS_SET,
+		constants.InfoRedisSet,
 		zap.String("key", key),
 		zap.ByteString("bytes", bytes),
 		zap.Duration("exp", exp),
@@ -93,6 +96,7 @@ func (rm *RedisManager) Set(key string, bytes []byte, exp time.Duration) error {
 	return nil
 }
 
+// Get takes a key and returns its associated value in bytes.
 func (rm *RedisManager) Get(key string) ([]byte, error) {
 	successStr := trueStr
 	// time redis op
@@ -109,16 +113,16 @@ func (rm *RedisManager) Get(key string) ([]byte, error) {
 		if err != redis.Nil {
 			// unexpected error occured when getting item
 			rm.logger.Error(
-				constants.ERROR_REDIS_GET_MSG,
+				constants.ErrorRedisGetMsg,
 				zap.String("key", key),
 				zap.Error(err),
 			)
 			// set success to false only if unexpected error occured
 			successStr = falseStr
-			return nil, errors.Error{constants.ERROR_REDIS_GET, constants.ERROR_REDIS_GET_MSG, err}
+			return nil, errors.Error{constants.ErrorRedisGet, constants.ErrorRedisGetMsg, err}
 		}
 		rm.logger.Info(
-			constants.INFO_REDIS_NOT_FOUND,
+			constants.InfoRedisNotFound,
 			zap.String("key", key),
 		)
 		// item is not in redis
@@ -126,7 +130,7 @@ func (rm *RedisManager) Get(key string) ([]byte, error) {
 	}
 
 	rm.logger.Info(
-		constants.INFO_REDIS_GET,
+		constants.InfoRedisGet,
 		zap.String("key", key),
 		zap.ByteString("bytes", bytes),
 	)
