@@ -3,6 +3,8 @@ package constants
 const (
 	// server
 
+	// InfoConfigLoaded info for logging
+	InfoConfigLoaded = "info_config_loaded"
 	// InfoServerStart message for logging
 	InfoServerStart = "info_server_start_success"
 	// InfoPromServerStart message for logging

@@ -23,29 +23,6 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-const (
-	signupStr = "signup"
-	loginStr  = "login"
-)
-
-// var (
-// 	// Create a metrics registry.
-// 	reg = prometheus.NewRegistry()
-// 	// Create some standard server metrics.
-// 	grpcMetrics = grpc_prometheus.NewServerMetrics()
-// 	// Create a customized counter metric.
-// 	customizedCounterMetric = prometheus.NewCounterVec(prometheus.CounterOpts{
-// 		Name: "demo_server_say_hello_method_handle_count",
-// 		Help: "Total number of RPCs handled on the server.",
-// 	}, []string{"name"})
-// )
-
-// func init() {
-// 	// Register standard server metrics and customized metrics to registry.
-// 	reg.MustRegister(grpcMetrics, customizedCounterMetric)
-// 	customizedCounterMetric.WithLabelValues("Test")
-// }
-
 // Server struct contains a reference to the handler. Used to start the grpc server.
 type Server struct {
 	pb.UnimplementedUserServiceServer
@@ -68,7 +45,7 @@ func (s *Server) StartServer(config *config.Config, dbManager *db.DatabaseManage
 	if err != nil {
 		logger.Fatal(
 			constants.ErrorServerStartFailMsg,
-			zap.Int32("errorCode", constants.ErrorServerStartFail),
+			zap.Int32(constants.ErrorCode, constants.ErrorServerStartFail),
 			zap.Error(err),
 		)
 	}
@@ -114,7 +91,7 @@ func (s *Server) StartServer(config *config.Config, dbManager *db.DatabaseManage
 	if err != nil {
 		logger.Fatal(
 			constants.ErrorServerStartFailMsg,
-			zap.Int32("errorCode", constants.ErrorServerStartFail),
+			zap.Int32(constants.ErrorCode, constants.ErrorServerStartFail),
 			zap.Error(err),
 		)
 	} else {
@@ -129,7 +106,7 @@ func (s *Server) StartServer(config *config.Config, dbManager *db.DatabaseManage
 func (s *Server) Signup(ctx context.Context, req *pb.SignupReq) (*pb.SignupRes, error) {
 	errorCodeStr := "-1"
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-		metrics.RequestDuration.WithLabelValues(s.config.ServiceLabel, signupStr, errorCodeStr).Observe(v)
+		metrics.RequestDuration.WithLabelValues(s.config.ServiceLabel, constants.Signup, errorCodeStr).Observe(v)
 	}))
 
 	// observe duration at the end of this function
@@ -162,7 +139,7 @@ func (s *Server) Signup(ctx context.Context, req *pb.SignupReq) (*pb.SignupRes, 
 func (s *Server) Login(ctx context.Context, req *pb.LoginReq) (*pb.LoginRes, error) {
 	errorCodeStr := "-1"
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-		metrics.RequestDuration.WithLabelValues(s.config.ServiceLabel, loginStr, errorCodeStr).Observe(v)
+		metrics.RequestDuration.WithLabelValues(s.config.ServiceLabel, constants.Login, errorCodeStr).Observe(v)
 	}))
 
 	// observe duration at the end of this function

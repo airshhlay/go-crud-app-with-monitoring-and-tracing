@@ -13,16 +13,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const (
-	createNewUserOp     = "AddUser"
-	getUserByUsernameOp = "GetUserByUsername"
-	getUserByIDOp       = "GetUserById"
-	queryTypeInsert     = "INSERT"
-	queryTypeSelect     = "SELECT"
-	trueStr             = "true"
-	falseStr            = "false"
-)
-
 // Handler is a helper called by Server to handle various functions.
 // It implements the bulk of the business logic.
 type Handler struct {
@@ -69,11 +59,11 @@ func (h *Handler) CreateNewUser(username string, password string) (int64, error)
 
 	h.logger.Info(
 		constants.InfoUserAdd,
-		zap.String("username", username),
-		zap.Int64("id", id),
+		zap.String(constants.Username, username),
+		zap.Int64(constants.ID, id),
 	)
 
-	return id, nil
+	return id, err
 }
 
 // VerifyLogin is called by the server when it receives a login request.
@@ -107,7 +97,7 @@ func (h *Handler) VerifyLogin(username string, password string) (int64, error) {
 		// user password error
 		h.logger.Info(
 			constants.ErrorUserPasswordMsg,
-			zap.String("username", username),
+			zap.String(constants.Username, username),
 			zap.Error(err),
 		)
 		return 0, &customErr.Error{
@@ -118,12 +108,12 @@ func (h *Handler) VerifyLogin(username string, password string) (int64, error) {
 	// log successful login
 	h.logger.Info(
 		constants.InfoUserLogin,
-		zap.String("username", username),
-		zap.Int64("userID", user.UserID),
+		zap.String(constants.Username, username),
+		zap.Int64(constants.UserID, user.UserID),
 	)
 
 	// return userID
-	return user.UserID, nil
+	return user.UserID, err
 }
 
 // checkUserExists is a helper function.
@@ -137,8 +127,8 @@ func (h *Handler) checkUserExists(username string) (bool, db.User, error) {
 			// query returned no results
 			h.logger.Info(
 				constants.InfoUserDoesNotExist,
-				zap.String("username", username),
-				zap.String("query", query),
+				zap.String(constants.Username, username),
+				zap.String(constants.Query, query),
 			)
 			return false, db.User{}, nil
 		}
@@ -147,10 +137,10 @@ func (h *Handler) checkUserExists(username string) (bool, db.User, error) {
 	}
 	h.logger.Info(
 		constants.InfoUserExists,
-		zap.String("username", username),
-		zap.Int64("userID", user.UserID),
+		zap.String(constants.Username, username),
+		zap.Int64(constants.UserID, user.UserID),
 	)
-	return true, user, nil
+	return true, user, err
 }
 
 // retrieveUserByUsername is a helper function that retrieves users from the database based on username.
@@ -160,7 +150,7 @@ func (h *Handler) retrieveUserByUsername(username string) (db.User, string, erro
 	var user db.User
 
 	query := fmt.Sprintf("SELECT * FROM users WHERE username='%s'", username)
-	err := h.dbManager.QueryOne(query, getUserByUsernameOp, &user.UserID, &user.Username, &user.Password)
+	err := h.dbManager.QueryOne(query, constants.GetUserByUsername, &user.UserID, &user.Username, &user.Password)
 	// err := res.Scan(&user.UserID, &user.Username, &user.Password)
 
 	return user, query, err
@@ -170,7 +160,7 @@ func (h *Handler) retrieveUserByUsername(username string) (db.User, string, erro
 func (h *Handler) insertNewUser(username string, hash []byte) (int64, error) {
 	query := fmt.Sprintf("INSERT INTO users(username, password) VALUES ('%s', '%s')", username, hash)
 
-	id, err := h.dbManager.InsertRow(query, createNewUserOp)
+	id, err := h.dbManager.InsertRow(query, constants.AddUser)
 	if err != nil {
 		// error occured when inserting user into database
 		return 0, &customErr.Error{
@@ -178,7 +168,7 @@ func (h *Handler) insertNewUser(username string, hash []byte) (int64, error) {
 		}
 	}
 
-	return id, nil
+	return id, err
 }
 
 // getPasswordHash uses the bcrypt package to generate a hash from the plaintext password.

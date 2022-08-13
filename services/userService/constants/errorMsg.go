@@ -1,6 +1,8 @@
 package constants
 
 const (
+	// ErrorLoadConfigFailMsg server error message
+	ErrorLoadConfigFailMsg = "error_load_config_fail"
 	// ErrorDatabaseInsertMsg for database insert failures
 	ErrorDatabaseInsertMsg = "error_database_insert_failure"
 	// ErrorDatabaseQueryMsg for database query failures
