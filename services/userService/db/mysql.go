@@ -20,7 +20,7 @@ const (
 	trueStr         = "true"
 )
 
-// DatabaseManager is a database manager struct containing a reference to the database connection, zap logger, and the database config
+// DatabaseManager is a struct containing a reference to the database connection, logger, and the database config
 type DatabaseManager struct {
 	db     *sql.DB
 	config *config.DbConfig
@@ -58,7 +58,7 @@ func InitDatabase(dbConfig *config.DbConfig, logger *zap.Logger) (*DatabaseManag
 		return nil, err
 	}
 
-	logger.Info(constants.INFO_DATABASE_CONNECT_SUCCESS)
+	logger.Info(constants.InfoDatabaseConnectSuccess)
 
 	dbManager := DatabaseManager{
 		db:     db,
@@ -69,15 +69,7 @@ func InitDatabase(dbConfig *config.DbConfig, logger *zap.Logger) (*DatabaseManag
 	return &dbManager, nil
 }
 
-// QueryOne will return a single row
-// func (dm *DatabaseManager) QueryOne(query string) *sql.Row {
-// 	res := dm.db.QueryRow(query)
-// 	dm.logger.Info(
-// 		constants.INFO_DATABASE_QUERY,
-// 		zap.String("query", query),
-// 	)
-// 	return res
-// }
+// QueryOne will query for a single *sql.Row, and write its contents into destination.
 func (dm *DatabaseManager) QueryOne(query string, opName string, destination ...any) error {
 	successStr := trueStr
 	// time database query
@@ -105,33 +97,13 @@ func (dm *DatabaseManager) QueryOne(query string, opName string, destination ...
 		return err
 	}
 	dm.logger.Info(
-		constants.INFO_DATABASE_QUERY,
+		constants.InfoDatabaseQuery,
 		zap.String("query", query),
 	)
 	return err
 }
 
-// InsertRow will insert a single row and return its ID
-// func (dm *DatabaseManager) InsertRow(query string) (int64, error) {
-// 	res, err := dm.db.Exec(query)
-
-// 	if err != nil {
-// 		return 0, err
-// 	}
-
-// 	id, err := res.LastInsertId()
-// 	if err != nil {
-// 		return 0, err
-// 	}
-
-// 	dm.logger.Info(
-// 		constants.INFO_DATABASE_INSERT,
-// 		zap.String("query", query),
-// 		zap.Any("id", id),
-// 	)
-
-// 	return id, nil
-// }
+// InsertRow will insert a single row and return its ID.
 func (dm *DatabaseManager) InsertRow(query string, opName string) (int64, error) {
 	successStr := trueStr
 	// time database query
@@ -163,7 +135,7 @@ func (dm *DatabaseManager) InsertRow(query string, opName string) (int64, error)
 	}
 
 	dm.logger.Info(
-		constants.INFO_DATABASE_INSERT,
+		constants.InfoDatabaseInsert,
 		zap.String("query", query),
 		zap.Any("id", id),
 	)
@@ -171,12 +143,12 @@ func (dm *DatabaseManager) InsertRow(query string, opName string) (int64, error)
 	return id, err
 }
 
-// QueryMany will query multiple rows
-func (dm *DatabaseManager) QueryMany(query string) (*sql.Rows, error) {
-	res, err := dm.db.Query(query)
-	dm.logger.Info(
-		constants.INFO_DATABASE_QUERY,
-		zap.String("query", query),
-	)
-	return res, err
-}
+// // QueryMany will query for and return multiple rows
+// func (dm *DatabaseManager) QueryMany(query string) (*sql.Rows, error) {
+// 	res, err := dm.db.Query(query)
+// 	dm.logger.Info(
+// 		constants.InfoDatabaseQuery,
+// 		zap.String("query", query),
+// 	)
+// 	return res, err
+// }

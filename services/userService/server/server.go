@@ -104,7 +104,7 @@ func (s *Server) StartServer(config *config.Config, dbManager *db.DatabaseManage
 			logger.Fatal(constants.ErrorPromHTTPServerMsg,
 				zap.Error(err))
 		} else {
-			logger.Info(constants.INFO_PROM_SERVER_START_MSG)
+			logger.Info(constants.InfoPromServerStart)
 		}
 	}()
 
@@ -119,7 +119,7 @@ func (s *Server) StartServer(config *config.Config, dbManager *db.DatabaseManage
 		)
 	} else {
 		logger.Info(
-			constants.INFO_SERVER_START_MSG,
+			constants.InfoServerStart,
 			zap.Any("port", listener.Addr()),
 		)
 	}
@@ -191,6 +191,6 @@ func (s *Server) Login(ctx context.Context, req *pb.LoginReq) (*pb.LoginRes, err
 
 	return &pb.LoginRes{
 		ErrorCode: -1,
-		UserId:    userID,
+		UserID:    userID,
 	}, nil
 }

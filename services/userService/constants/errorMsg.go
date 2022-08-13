@@ -15,7 +15,7 @@ const (
 	ErrorPromInitCustomMetricsMsg = "error_prom_init_custom_metrics"
 	// ErrorPromHTTPServerMsg for when the http server for prometheus metrics fails to start
 	ErrorPromHTTPServerMsg = "error_prom_http_server"
-	// ErrorUserPasswordMSg for errors with the user password
+	// ErrorUserPasswordMsg for errors with the user password
 	ErrorUserPasswordMsg = "error_user_password"
 	// ErrorTypecastMsg for errors typecasting error to customErr
 	ErrorTypecastMsg = "error_typecast"

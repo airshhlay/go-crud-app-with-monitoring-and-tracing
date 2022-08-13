@@ -33,7 +33,7 @@ type Handler struct {
 
 // CreateNewUser is called by the server to create a new user during Signup.
 // First encrypts the user's given password, and inserts the new row into the database.
-// If successful, returns the userId.
+// If successful, returns the userID.
 // Else, returns an error.
 func (h *Handler) CreateNewUser(username string, password string) (int64, error) {
 	exists, _, err := h.checkUserExists(username)
@@ -68,7 +68,7 @@ func (h *Handler) CreateNewUser(username string, password string) (int64, error)
 	id, err := h.insertNewUser(username, hash)
 
 	h.logger.Info(
-		constants.INFO_USER_ADD_MSG,
+		constants.InfoUserAdd,
 		zap.String("username", username),
 		zap.Int64("id", id),
 	)
@@ -81,7 +81,7 @@ func (h *Handler) CreateNewUser(username string, password string) (int64, error)
 // and returns an error if the user does not exist
 // or if something went wrong when querying the database.
 // Verifies the user's given password gainst the hash in the database,
-// and returns the userId if passwords match.
+// and returns the userID if passwords match.
 // Else, returns an error.
 func (h *Handler) VerifyLogin(username string, password string) (int64, error) {
 	// retrieve the user
@@ -117,12 +117,12 @@ func (h *Handler) VerifyLogin(username string, password string) (int64, error) {
 
 	// log successful login
 	h.logger.Info(
-		constants.INFO_USER_LOGIN_MSG,
+		constants.InfoUserLogin,
 		zap.String("username", username),
-		zap.Int64("userId", user.UserID),
+		zap.Int64("userID", user.UserID),
 	)
 
-	// return userId
+	// return userID
 	return user.UserID, nil
 }
 
@@ -136,7 +136,7 @@ func (h *Handler) checkUserExists(username string) (bool, db.User, error) {
 		if err == sql.ErrNoRows {
 			// query returned no results
 			h.logger.Info(
-				constants.INFO_USER_DOES_NOT_EXIST,
+				constants.InfoUserDoesNotExist,
 				zap.String("username", username),
 				zap.String("query", query),
 			)
@@ -146,9 +146,9 @@ func (h *Handler) checkUserExists(username string) (bool, db.User, error) {
 		return false, db.User{}, err
 	}
 	h.logger.Info(
-		constants.INFO_USER_EXISTS,
+		constants.InfoUserExists,
 		zap.String("username", username),
-		zap.Int64("userId", user.UserID),
+		zap.Int64("userID", user.UserID),
 	)
 	return true, user, nil
 }
