@@ -48,6 +48,7 @@ services:
     build: "./services/userService"
     ports:
       - "6000:6000"
+      - "6001:6001"
     networks:
       - backend
     depends_on:
@@ -93,6 +94,7 @@ services:
     build: "./services/itemService"
     ports:
       - "7000:7000"
+      - "7001:7001"
     networks:
       - backend
     depends_on:
@@ -122,7 +124,8 @@ services:
       - 9090:9090
     # depends_on:
     #   - cadvisor
-    # network: backend
+    networks:
+      - monitoring
 
   node-exporter:
     image: prom/node-exporter
@@ -140,7 +143,9 @@ services:
     restart: always
     deploy:
       mode: global
-    # network: backend
+    networks:
+      - backend
+      - monitoring
 
   # analyses and exposes resource usage and performance data from running containers
   # cadvisor:
@@ -171,10 +176,73 @@ services:
       - 3000:3000
     depends_on:
       - prometheus
-    # network: backend
+    networks:
+      - monitoring
+  
+  # monitors the user service db
+  userservice-mysql-exporter:
+    container_name: userservice-mysql-exporter
+    image: prom/mysqld-exporter:latest
+    environment:
+      - DATA_SOURCE_NAME=exporter:exporterpassword@(docker.for.mac.host.internal:3306)/itemservicedb
+      - web.listen-address=:9104
+      - collect.info_schema.tablestats=true
+      - collect.info_schema.userstats=true
+      - collect.info_schema.query_response_time=true
+      - collect.auto_increment.columns=true
+      - collect.binlog_size=true
+      - collect.perf_schema.eventsstatements=true
+      - collect.perf_schema.eventswaits=true
+      - collect.perf_schema.file_events=true
+      - collect.perf_schema.indexiowaits=true
+      - collect.perf_schema.tableiowaits=true
+      - collect.perf_schema.tablelocks=true
+    ports:
+      - 9104:9104
+    networks:
+      - monitoring
 
+  itemservice-mysql-exporter:
+    container_name: itemservice-mysql-exporter
+    image: prom/mysqld-exporter:latest
+    environment:
+      - DATA_SOURCE_NAME=exporter:exporterpassword@(docker.for.mac.host.internal:3306)/itemservicedb
+      - web.listen-address=:9105
+      - collect.info_schema.tablestats=true
+      - collect.info_schema.userstats=true
+      - collect.info_schema.query_response_time=true
+      - collect.auto_increment.columns=true
+      - collect.binlog_size=true
+      - collect.perf_schema.eventsstatements=true
+      - collect.perf_schema.eventswaits=true
+      - collect.perf_schema.file_events=true
+      - collect.perf_schema.indexiowaits=true
+      - collect.perf_schema.tableiowaits=true
+      - collect.perf_schema.tablelocks=true
+    ports:
+      - 9105:9104
+    networks:
+      - monitoring
 
-
+  jaeger:
+    container_name: jaeger
+    image: jaegertracing/all-in-one:1.37
+    environment:
+      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+    - 6831:6831/udp
+    - 6832:6832/udp
+    - 5778:5778
+    - 16686:16686
+    - 4317:4317
+    - 4318:4318
+    - 14250:14250
+    - 14268:14268
+    - 14269:14269
+    - 9411:9411
+    networks:
+    - backend
 volumes:
   # userservice-mysql:
   itemservice-redis:
@@ -186,4 +254,6 @@ networks:
   frontend:
     driver: bridge
   backend:
+    driver: bridge
+  monitoring:
     driver: bridge

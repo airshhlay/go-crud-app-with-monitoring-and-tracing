@@ -23,11 +23,42 @@ scrape_configs:
     metrics_path: '/metrics'
     scrape_interval: 5s
     static_configs:
-      - targets: ['docker.for.mac.host.internal:5000']
+      - targets:
+        - 'docker.for.mac.host.internal:5000'
   - job_name: cadvisor
     scrape_interval: 5s
     static_configs:
     - targets:
       - cadvisor:8080
+  - job_name: 'userservice-metrics'
+    metrics_path: '/metrics'
+    scrape_interval: 5s
+    static_configs:
+      - targets:
+        - 'docker.for.mac.host.internal:6001'
+  - job_name: 'itemservice-metrics'
+    metrics_path: '/metrics'
+    scrape_interval: 5s
+    static_configs:
+      - targets:
+        - 'docker.for.mac.host.internal:7001'
+  - job_name: 'node-exporter'
+    honor_timestamps: true
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+    - targets:
+      - 'docker.for.mac.host.internal:9100'
+  - job_name: 'userservice-mysql-exporter'
+    static_configs:
+    - targets:
+      - 'docker.for.mac.host.internal:9104'
+  - job_name: 'itemservice-mysql-exporter'
+    static_configs:
+    - targets:
+      - 'docker.for.mac.host.internal:9105'
+    
 
         
