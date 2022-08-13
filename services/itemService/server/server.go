@@ -24,12 +24,6 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-const (
-	deleteFavStr  = "deleteFav"
-	addFavStr     = "addFav"
-	getFavListStr = "getFavList"
-)
-
 // Server struct contains a reference to the handler. Used to start the grpc server.
 type Server struct {
 	pb.UnimplementedItemServiceServer
@@ -49,7 +43,7 @@ func (s *Server) StartServer(config *config.Config, logger *zap.Logger, dbManage
 	s.logger = logger
 	s.config = config
 
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", config.Port))
+	listener, err := net.Listen(constants.TCP, fmt.Sprintf(":%s", config.Port))
 	if err != nil {
 		s.logger.Fatal(
 			constants.ErrorServerStartFailMsg,
@@ -80,7 +74,7 @@ func (s *Server) StartServer(config *config.Config, logger *zap.Logger, dbManage
 
 	// start http server for prometheus
 	go func() {
-		logger.Info("Starting http server", zap.String("host", config.PrometheusConfig.Host), zap.String("port", config.PrometheusConfig.Port))
+		logger.Info(constants.InfoHTTPServerStart, zap.String(constants.Host, config.PrometheusConfig.Host), zap.String(constants.Port, config.PrometheusConfig.Port))
 		http.ListenAndServe(fmt.Sprintf(":%s", config.PrometheusConfig.Port), nil)
 		if err != nil {
 			logger.Fatal(constants.ErrorPromHTTPServerMsg,
@@ -101,22 +95,22 @@ func (s *Server) StartServer(config *config.Config, logger *zap.Logger, dbManage
 	if err != nil {
 		logger.Fatal(
 			constants.ErrorServerStartFailMsg,
-			zap.Int32("errorCode", constants.ErrorServerStartFail),
+			zap.Int32(constants.ErrorCode, constants.ErrorServerStartFail),
 			zap.Error(err),
 		)
 	} else {
 		logger.Info(
-			constants.InfoServerStart,
-			zap.Any("port", listener.Addr()),
+			constants.InfoGRPCServerStart,
+			zap.Any(constants.Port, listener.Addr()),
 		)
 	}
 }
 
 // DeleteFav implements the grpc service method, as defined in service.proto
 func (s *Server) DeleteFav(ctx context.Context, req *pb.DeleteFavReq) (*pb.DeleteFavRes, error) {
-	errorCodeStr := "-1"
+	errorCodeStr := constants.NilErrorCode
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-		metrics.RequestDuration.WithLabelValues(s.config.ServiceLabel, deleteFavStr, errorCodeStr).Observe(v)
+		metrics.RequestDuration.WithLabelValues(s.config.ServiceLabel, constants.DeleteFav, errorCodeStr).Observe(v)
 	}))
 	// observe duration at the end of this function
 	defer func() {
@@ -145,9 +139,9 @@ func (s *Server) DeleteFav(ctx context.Context, req *pb.DeleteFavReq) (*pb.Delet
 
 // AddFav implements the grpc service method, as defined in service.proto
 func (s *Server) AddFav(ctx context.Context, req *pb.AddFavReq) (*pb.AddFavRes, error) {
-	errorCodeStr := "-1"
+	errorCodeStr := constants.NilErrorCode
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-		metrics.RequestDuration.WithLabelValues(s.config.ServiceLabel, addFavStr, errorCodeStr).Observe(v)
+		metrics.RequestDuration.WithLabelValues(s.config.ServiceLabel, constants.AddFav, errorCodeStr).Observe(v)
 	}))
 	// observe duration at the end of this function
 	defer func() {
@@ -181,9 +175,9 @@ func (s *Server) AddFav(ctx context.Context, req *pb.AddFavReq) (*pb.AddFavRes, 
 
 // GetFavList implements the grpc service method, as defined in service.proto
 func (s *Server) GetFavList(ctx context.Context, req *pb.GetFavListReq) (*pb.GetFavListRes, error) {
-	errorCodeStr := "-1"
+	errorCodeStr := constants.NilErrorCode
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-		metrics.RequestDuration.WithLabelValues(s.config.ServiceLabel, getFavListStr, errorCodeStr).Observe(v)
+		metrics.RequestDuration.WithLabelValues(s.config.ServiceLabel, constants.GetFavList, errorCodeStr).Observe(v)
 	}))
 	// observe duration at the end of this function
 	defer func() {

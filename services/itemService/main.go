@@ -2,6 +2,7 @@ package main
 
 import (
 	"itemService/config"
+	"itemService/constants"
 	"itemService/db"
 	"log"
 
@@ -21,14 +22,11 @@ func main() {
 	// read in config
 	config, err := config.LoadConfig(logger)
 	if err != nil {
-		logger.Fatal(
-			"Failed to load config",
-			zap.Error(err),
-		)
+		logger.Fatal(constants.ErrorLoadConfigFailMsg, zap.Error(err))
 		panic(err)
 	}
 
-	logger.Info("Loaded config")
+	logger.Info(constants.InfoConfigLoaded)
 
 	// connect to database, get database manager
 	dbManager, err := db.InitDatabase(&config.DbConfig, logger)

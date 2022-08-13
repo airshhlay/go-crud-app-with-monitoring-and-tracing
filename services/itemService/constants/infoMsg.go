@@ -3,10 +3,14 @@ package constants
 const (
 	// server
 
+	// InfoConfigLoaded info for logging
+	InfoConfigLoaded = "info_config_loaded"
 	// InfoPromServerStart info for logging
 	InfoPromServerStart = "info_prom_sever_start"
-	// InfoServerStart info for logging
-	InfoServerStart = "info_server_start_success"
+	// InfoHTTPServerStart info for logging
+	InfoHTTPServerStart = "info_http_server_start"
+	// InfoGRPCServerStart info for logging
+	InfoGRPCServerStart = "info_grpc_server_start"
 
 	// database
 
@@ -35,6 +39,8 @@ const (
 
 	// queries
 
+	// InfoFavouriteAdded info for logging
+	InfoFavouriteAdded = "info_favourite_added"
 	// InfoItemNotInFavourites info for logging
 	InfoItemNotInFavourites = "info_item_not_in_favourites"
 	// InfoItemInFavourites info for logging

@@ -3,6 +3,8 @@ package constants
 const (
 	// server error
 
+	// ErrorLoadConfigFailMsg server error message
+	ErrorLoadConfigFailMsg = "error_load_config_fail"
 	// ErrorServerStartFailMsg server error message
 	ErrorServerStartFailMsg = "error_server_start_fail"
 	// ErrorPromHTTPServerMsg server error message

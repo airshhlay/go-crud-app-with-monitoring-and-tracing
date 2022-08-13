@@ -17,13 +17,6 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	deleteFavFromDbStr  = "deleteFav"
-	getFavListFromDbStr = "getFavList"
-	addFavIntoDbStr     = "addFav"
-	getFavCount         = "getFavCount"
-)
-
 // Handler is a helper called by Server to handle various functions.
 // It implements the bulk of the business logic.
 type Handler struct {
@@ -35,12 +28,6 @@ type Handler struct {
 
 // AddItemToUserFavList is called by the server when a request to the AddFav grpc service method is made
 func (h *Handler) AddItemToUserFavList(itemID int64, shopID int64, userID int64) (*pb.Item, error) {
-	h.logger.Info(
-		"received request to add item",
-		zap.Int64("userID", userID),
-		zap.Int64("itemID", itemID),
-		zap.Int64("shopID", shopID),
-	)
 	// check if item is already in user's favourite's list
 	_, query, err := h.retrieveFavFromDb(userID, itemID, shopID)
 
@@ -49,7 +36,7 @@ func (h *Handler) AddItemToUserFavList(itemID int64, shopID int64, userID int64)
 			// other unexpected error occured
 			h.logger.Error(
 				constants.ErrorDatabaseQueryMsg,
-				zap.String("query", query),
+				zap.String(constants.Query, query),
 				zap.Error(err),
 			)
 			return nil, &customErr.Error{constants.ErrorDatabaseQuery, constants.ErrorDatabaseQueryMsg, err}
@@ -58,9 +45,9 @@ func (h *Handler) AddItemToUserFavList(itemID int64, shopID int64, userID int64)
 		// item is already in user's favourites
 		h.logger.Info(
 			constants.InfoItemInFavourites,
-			zap.Int64("userID", userID),
-			zap.Int64("itemID", itemID),
-			zap.Int64("shopID", shopID),
+			zap.Int64(constants.UserID, userID),
+			zap.Int64(constants.ItemID, itemID),
+			zap.Int64(constants.ShopID, shopID),
 		)
 		// return an error
 		return nil, &customErr.Error{ErrorCode: constants.ErrorItemInFavourites, ErrorMsg: constants.InfoItemInFavourites}
@@ -69,9 +56,9 @@ func (h *Handler) AddItemToUserFavList(itemID int64, shopID int64, userID int64)
 	// query returned no results, item is not yet in favourites
 	h.logger.Debug(
 		constants.InfoItemNotInFavourites,
-		zap.Int64("userID", userID),
-		zap.Int64("itemID", itemID),
-		zap.Int64("shopID", shopID),
+		zap.Int64(constants.UserID, userID),
+		zap.Int64(constants.ItemID, itemID),
+		zap.Int64(constants.ShopID, shopID),
 	)
 
 	// checks the cache for the item, else makes an external api call to fetch the item information
@@ -86,7 +73,7 @@ func (h *Handler) AddItemToUserFavList(itemID int64, shopID int64, userID int64)
 		return nil, err
 	}
 
-	return item, nil
+	return item, err
 }
 
 // GetUserFavourites is called by the server when a request to the GetFavList grpc service method is made
@@ -127,7 +114,7 @@ func (h *Handler) GetUserFavourites(userID int64, page int32) ([]*pb.Item, int32
 		return items, 0, err
 	}
 
-	return items, totalPages, nil
+	return items, totalPages, err
 }
 
 // DeleteFavourite is called by the server when a request to the DeleteFav grpc service method is made
@@ -190,8 +177,8 @@ func (h *Handler) retrieveItemFromRedis(itemID int64, shopID int64) (*pb.Item, e
 		// error occured when unmarshalling
 		h.logger.Error(
 			constants.ErrorUnmarshalMsg,
-			zap.Int64("itemID", itemID),
-			zap.Int64("shopID", shopID),
+			zap.Int64(constants.ItemID, itemID),
+			zap.Int64(constants.ShopID, shopID),
 			zap.Error(err),
 		)
 		return nil, &customErr.Error{constants.ErrorUnmarshal, constants.ErrorUnmarshalMsg, err}
@@ -199,7 +186,7 @@ func (h *Handler) retrieveItemFromRedis(itemID int64, shopID int64) (*pb.Item, e
 
 	h.logger.Info(
 		constants.InfoRedisGet,
-		zap.Any("item", item),
+		zap.Any(constants.Item, item),
 	)
 
 	if item.ItemID == 0 || item.ShopID == 0 || item.Price == 0 || item.Name == "" {
@@ -208,7 +195,7 @@ func (h *Handler) retrieveItemFromRedis(itemID int64, shopID int64) (*pb.Item, e
 		return nil, nil
 	}
 
-	return &item, nil
+	return &item, err
 }
 
 // addItemToRedis is a helper function to add an item to redis.
@@ -219,9 +206,9 @@ func (h *Handler) addItemToRedis(itemID int64, shopID int64, item *pb.Item) erro
 		// error occured when marshalling
 		h.logger.Error(
 			constants.ErrorMarshalMsg,
-			zap.Int64("itemID", itemID),
-			zap.Int64("shopID", shopID),
-			zap.Any("item", item),
+			zap.Int64(constants.ItemID, itemID),
+			zap.Int64(constants.ShopID, shopID),
+			zap.Any(constants.Item, item),
 			zap.Error(err),
 		)
 		return &customErr.Error{constants.ErrorMarshal, constants.ErrorMarshalMsg, err}
@@ -233,15 +220,15 @@ func (h *Handler) addItemToRedis(itemID int64, shopID int64, item *pb.Item) erro
 	if err != nil {
 		h.logger.Error(
 			constants.ErrorRedisSetMsg,
-			zap.Int64("itemID", itemID),
-			zap.Int64("shopID", shopID),
-			zap.Any("item", item),
+			zap.Int64(constants.ItemID, itemID),
+			zap.Int64(constants.ShopID, shopID),
+			zap.Any(constants.Item, item),
 			zap.Error(err),
 		)
 		return &customErr.Error{constants.ErrorRedisSet, constants.ErrorRedisSetMsg, err}
 	}
 
-	return nil
+	return err
 }
 
 // retrieveFavFromDb is a helper function called to perform a query on the database for a user's favourited item.
@@ -250,33 +237,33 @@ func (h *Handler) addItemToRedis(itemID int64, shopID int64, item *pb.Item) erro
 func (h *Handler) retrieveFavFromDb(userID int64, itemID int64, shopID int64) (*db.Favourite, string, error) {
 	var fav db.Favourite
 	query := fmt.Sprintf("SELECT * FROM Favourites WHERE userID='%d' AND itemID='%d' AND shopID='%d'", userID, itemID, shopID)
-	err := h.dbManager.QueryOne(query, getFavListStr, &fav.ID, &fav.UserID, &fav.ItemID, &fav.ShopID, &fav.TimeAdded)
+	err := h.dbManager.QueryOne(query, constants.GetFavList, &fav.ID, &fav.UserID, &fav.ItemID, &fav.ShopID, &fav.TimeAdded)
 	return &fav, query, err
 }
 
 func (h *Handler) addFavIntoDb(userID int64, itemID int64, shopID int64) error {
 	query := fmt.Sprintf("INSERT INTO Favourites(userID, itemID, shopID) VALUES('%d','%d','%d')", userID, itemID, shopID)
-	id, err := h.dbManager.InsertRow(query, addFavIntoDbStr)
+	id, err := h.dbManager.InsertRow(query, constants.AddFav)
 	if err != nil {
 		// error occured when inserting user into database
 		return &customErr.Error{constants.ErrorDatabaseInsert, constants.ErrorDatabaseInsertMsg, err}
 	}
 	h.logger.Info(
-		"favourite added",
-		zap.Int64("userID", userID),
-		zap.Int64("itemID", itemID),
-		zap.Int64("shopID", shopID),
-		zap.Int64("id", id),
+		constants.InfoFavouriteAdded,
+		zap.Int64(constants.UserID, userID),
+		zap.Int64(constants.ItemID, itemID),
+		zap.Int64(constants.ShopID, shopID),
+		zap.Int64(constants.ID, id),
 	)
 
-	return nil
+	return err
 }
 
 // removeFavFromDb is a helper function to delete a user's favourite from the database.
 func (h *Handler) removeFavFromDb(userID int64, itemID int64, shopID int64) error {
 	query := fmt.Sprintf("DELETE FROM Favourites WHERE userID='%d' and itemid='%d' and shopID='%d'", userID, itemID, shopID)
 
-	rowsDeleted, err := h.dbManager.DeleteOne(query, deleteFavFromDbStr)
+	rowsDeleted, err := h.dbManager.DeleteOne(query, constants.DeleteFav)
 
 	// unexpected error occured or no rows deleted
 	if err != nil || rowsDeleted != 1 {
@@ -287,7 +274,7 @@ func (h *Handler) removeFavFromDb(userID int64, itemID int64, shopID int64) erro
 		return &customErr.Error{constants.ErrorDatabaseDelete, constants.ErrorDatabaseDeleteMsg, err}
 	}
 
-	return nil
+	return err
 }
 
 // fetchItemInfoFromExternal is a helper function for making external HTTP calls to fetch the item's information.
@@ -305,9 +292,9 @@ func (h *Handler) fetchItemInfoFromExternal(itemID int64, shopID int64) (*pb.Ite
 		// shopee api returned error
 		h.logger.Error(
 			constants.ErrorExternalShopeeAPICallMsg,
-			zap.Int64("itemID", itemID),
-			zap.Int64("shopID", shopID),
-			zap.Any("res", res),
+			zap.Int64(constants.ItemID, itemID),
+			zap.Int64(constants.ShopID, shopID),
+			zap.Any(constants.Res, res),
 		)
 		return nil, &customErr.Error{constants.ErrorExternalShopeeAPICall, constants.ErrorExternalShopeeAPICallMsg, err}
 	}
@@ -317,7 +304,7 @@ func (h *Handler) fetchItemInfoFromExternal(itemID int64, shopID int64) (*pb.Ite
 		ShopID: res.ItemData.ShopID,
 		Name:   res.ItemData.Name,
 		Price:  res.ItemData.Price,
-	}, nil
+	}, err
 }
 
 // retrieveFavListFromDb is a helper function to retrieve all of a user's, identified by their userID, favourites.
@@ -326,14 +313,14 @@ func (h *Handler) retrieveFavListFromDb(userID int64, page int) ([]db.Favourite,
 	query := fmt.Sprintf("SELECT * FROM Favourites WHERE userID='%d' ORDER BY timeAdded desc LIMIT %d OFFSET %d", userID, h.config.MaxPerPage, h.config.MaxPerPage*page)
 
 	// query rows
-	rows, err := h.dbManager.QueryRows(query, getFavListStr)
+	rows, err := h.dbManager.QueryRows(query, constants.GetFavList)
 	if err != nil {
 		// error occured when querying
 		h.logger.Error(
 			constants.ErrorDatabaseQueryMsg,
-			zap.Int64("userID", userID),
-			zap.Int("page", page),
-			zap.String("query", query),
+			zap.Int64(constants.UserID, userID),
+			zap.Int(constants.Page, page),
+			zap.String(constants.Query, query),
 		)
 		return nil, &customErr.Error{
 			constants.ErrorDatabaseQuery, constants.ErrorDatabaseQueryMsg,
@@ -366,11 +353,11 @@ func (h *Handler) retrieveFavListFromDb(userID int64, page int) ([]db.Favourite,
 	}
 	h.logger.Info(
 		constants.InfoDatabaseQueryRows,
-		zap.Int64("userID", userID),
-		zap.String("query", query),
-		zap.Any("result", favourites),
+		zap.Int64(constants.UserID, userID),
+		zap.String(constants.Query, query),
+		zap.Any(constants.Res, favourites),
 	)
-	return favourites, nil
+	return favourites, err
 }
 
 // getFavouritesCount is a helper function used to count the total number of favourited items a user has.
@@ -378,17 +365,17 @@ func (h *Handler) getFavouritesCount(userID int64) (int32, error) {
 	query := fmt.Sprintf("SELECT count(*) FROM Favourites WHERE userID='%d'", userID)
 	var count int
 	// err := h.dbManager.QueryOne(query).Scan(&count)
-	err := h.dbManager.QueryOne(query, getFavCount, &count)
+	err := h.dbManager.QueryOne(query, constants.GetFavCount, &count)
 	if err != nil {
 		return 0, &customErr.Error{constants.ErrorDatabaseQuery, constants.ErrorDatabaseQueryMsg, err}
 	}
 
 	h.logger.Info(
 		constants.InfoDatabaseQuery,
-		zap.Int("count", count),
-		zap.String("query", query),
+		zap.Int(constants.Count, count),
+		zap.String(constants.Query, query),
 	)
 
 	numPages := util.CalculateNumberOfPages(count, h.config.MaxPerPage)
-	return int32(numPages), nil
+	return int32(numPages), err
 }

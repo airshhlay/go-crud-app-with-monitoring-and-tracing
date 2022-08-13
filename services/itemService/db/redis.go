@@ -21,13 +21,6 @@ type RedisManager struct {
 	logger *zap.Logger
 }
 
-const (
-	redisOpGetStr = "get"
-	redisOpSetStr = "set"
-	trueStr       = "true"
-	falseStr      = "false"
-)
-
 // InitRedis creates the redis client, initialises and tests the connection
 func InitRedis(redisConfig *config.RedisConfig, logger *zap.Logger) (*RedisManager, error) {
 	cfg := redis.Options{
@@ -42,7 +35,7 @@ func InitRedis(redisConfig *config.RedisConfig, logger *zap.Logger) (*RedisManag
 	if err != nil {
 		logger.Fatal(
 			constants.ErrorRedisConnectionMsg,
-			zap.Int32("errorCode", constants.ErrorRedisConnection),
+			zap.Int32(constants.ErrorCode, constants.ErrorRedisConnection),
 			zap.Error(err),
 		)
 		return nil, err
@@ -64,10 +57,10 @@ func InitRedis(redisConfig *config.RedisConfig, logger *zap.Logger) (*RedisManag
 
 // Set takes a key of type string and a byte array as a value. exp is used to define an expiry.
 func (rm *RedisManager) Set(key string, bytes []byte, exp time.Duration) error {
-	successStr := trueStr
+	successStr := constants.True
 	// time redis op
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-		metrics.RedisOpDuration.WithLabelValues(rm.config.ServiceLabel, redisOpGetStr, successStr).Observe(v)
+		metrics.RedisOpDuration.WithLabelValues(rm.config.ServiceLabel, constants.Get, successStr).Observe(v)
 	}))
 	defer func() {
 		timer.ObserveDuration()
@@ -78,30 +71,30 @@ func (rm *RedisManager) Set(key string, bytes []byte, exp time.Duration) error {
 	if err != nil {
 		rm.logger.Error(
 			constants.ErrorRedisSetMsg,
-			zap.String("key", key),
-			zap.ByteString("bytes", bytes),
+			zap.String(constants.Key, key),
+			zap.ByteString(constants.Bytes, bytes),
 			zap.Error(err),
 		)
 		// if error, set success to false
-		successStr = falseStr
+		successStr = constants.False
 		return errors.Error{constants.ErrorRedisSet, constants.ErrorRedisSetMsg, err}
 	}
 
 	rm.logger.Info(
 		constants.InfoRedisSet,
-		zap.String("key", key),
-		zap.ByteString("bytes", bytes),
-		zap.Duration("exp", exp),
+		zap.String(constants.Key, key),
+		zap.ByteString(constants.Bytes, bytes),
+		zap.Duration(constants.Exp, exp),
 	)
 	return nil
 }
 
 // Get takes a key and returns its associated value in bytes.
 func (rm *RedisManager) Get(key string) ([]byte, error) {
-	successStr := trueStr
+	successStr := constants.True
 	// time redis op
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-		metrics.RedisOpDuration.WithLabelValues(rm.config.ServiceLabel, redisOpGetStr, successStr).Observe(v)
+		metrics.RedisOpDuration.WithLabelValues(rm.config.ServiceLabel, constants.Get, successStr).Observe(v)
 	}))
 	defer func() {
 		timer.ObserveDuration()
@@ -114,16 +107,16 @@ func (rm *RedisManager) Get(key string) ([]byte, error) {
 			// unexpected error occured when getting item
 			rm.logger.Error(
 				constants.ErrorRedisGetMsg,
-				zap.String("key", key),
+				zap.String(constants.Key, key),
 				zap.Error(err),
 			)
 			// set success to false only if unexpected error occured
-			successStr = falseStr
+			successStr = constants.False
 			return nil, errors.Error{constants.ErrorRedisGet, constants.ErrorRedisGetMsg, err}
 		}
 		rm.logger.Info(
 			constants.InfoRedisNotFound,
-			zap.String("key", key),
+			zap.String(constants.Key, key),
 		)
 		// item is not in redis
 		return nil, nil
@@ -131,8 +124,8 @@ func (rm *RedisManager) Get(key string) ([]byte, error) {
 
 	rm.logger.Info(
 		constants.InfoRedisGet,
-		zap.String("key", key),
-		zap.ByteString("bytes", bytes),
+		zap.String(constants.Key, key),
+		zap.ByteString(constants.Bytes, bytes),
 	)
 	return bytes, err
 }
