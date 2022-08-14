@@ -35,8 +35,8 @@ func FetchItemPrice(ctx context.Context, config *config.Shopee, logger *zap.Logg
 	span.SetTag(tracing.Component, tracing.ComponentExternal)
 	defer span.Finish()
 	// time the request
-	successStr := "true" // for the metric label "success"
-	errorCodeStr := "0"  // for the metric label "errorCode"
+	successStr := constants.True // for the metric label "success"
+	var errorCodeStr string      // for the metric label "errorCode"
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
 		metrics.ExternalRequestDuration.WithLabelValues(config.GetItem.Endpoint, successStr, errorCodeStr).Observe(v)
 	}))
@@ -52,10 +52,10 @@ func FetchItemPrice(ctx context.Context, config *config.Shopee, logger *zap.Logg
 		// error occured when making get request
 		logger.Error(
 			constants.ErrorExternalShopeeAPICallMsg,
-			zap.String("endpoint", endpoint),
+			zap.String(constants.Endpoint, endpoint),
 			zap.Error(err),
 		)
-		successStr = "false"
+		successStr = constants.False
 		return nil, errors.Error{constants.ErrorExternalShopeeAPICall, constants.ErrorExternalShopeeAPICallMsg, err}
 	}
 	defer raw.Body.Close()
@@ -65,7 +65,7 @@ func FetchItemPrice(ctx context.Context, config *config.Shopee, logger *zap.Logg
 		// io error occured
 		logger.Error(
 			constants.ErrorExternalShopeeAPICallMsg,
-			zap.String("endpoint", endpoint),
+			zap.String(constants.Endpoint, endpoint),
 			zap.Error(err),
 		)
 		return nil, err
@@ -77,18 +77,18 @@ func FetchItemPrice(ctx context.Context, config *config.Shopee, logger *zap.Logg
 		// unmarshalling error occured
 		logger.Error(
 			constants.ErrorExternalShopeeAPICallMsg,
-			zap.String("endpoint", endpoint),
+			zap.String(constants.Endpoint, endpoint),
 			zap.Error(err),
 		)
-		successStr = "false"
+		successStr = constants.False
 		return nil, err
 	}
 
 	errorCodeStr = strconv.Itoa(res.Error)
 	logger.Info(
 		constants.InfoExternalAPICall,
-		zap.String("endpoint", endpoint),
-		zap.Any("res", res),
+		zap.String(constants.Endpoint, endpoint),
+		zap.Any(constants.Res, res),
 	)
 	return res, nil
 }
