@@ -160,7 +160,7 @@ func (s *Server) Signup(ctx context.Context, req *pb.SignupReq) (*pb.SignupRes, 
 // Login is the implementation of the grpc server service, as defined in service.proto
 func (s *Server) Login(ctx context.Context, req *pb.LoginReq) (*pb.LoginRes, error) {
 	// start tracing span from context
-	span, ctx := ot.StartSpanFromContext(ctx, grpcSignup)
+	span, ctx := ot.StartSpanFromContext(ctx, grpcLogin)
 	s.addSpanTags(span)
 	defer span.Finish()
 

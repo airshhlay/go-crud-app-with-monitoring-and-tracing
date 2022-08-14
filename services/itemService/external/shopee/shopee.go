@@ -44,7 +44,6 @@ func FetchItemPrice(ctx context.Context, config *config.Shopee, logger *zap.Logg
 		timer.ObserveDuration()
 	}()
 
-	// TODO: add custom error messages for io error, unmarshalling error etc
 	// make external api call
 	endpoint := fmt.Sprintf("%s?itemID=%d&shopID=%d", config.GetItem.Endpoint, itemID, shopID)
 	span.SetTag(tracing.PeerAddress, endpoint)
