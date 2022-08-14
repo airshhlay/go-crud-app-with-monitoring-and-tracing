@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"fmt"
 	client "gateway/client"
 	config "gateway/config"
 	constants "gateway/constants"
@@ -61,6 +60,14 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 		timer.ObserveDuration()
 	}()
 
+	// observe response size
+	responseSize := prometheus.ObserverFunc(func(v float64) {
+		metrics.ResponseSize.WithLabelValues(u.config.Label, c.Request.URL.Path, errorCodeStr).Observe(v)
+	})
+	defer func() {
+		responseSize.Observe(float64(c.Writer.Size()))
+	}()
+
 	var loginReq req.LoginReq
 	err := c.BindJSON(&loginReq)
 	if err != nil {
@@ -86,7 +93,6 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 	}
 
 	// call user service
-	fmt.Println("GATEWAY CONTEXT: ", c.Request.Context())
 	clientLoginRes, err := u.client.Login(c.Request.Context(), clientLoginReq)
 	if err != nil {
 		u.removeCookie(c, constants.Token)
@@ -95,9 +101,12 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 		SendStandardGatewayResponse(c, span, constants.ErrorUserserviceConnection, constants.ErrorUserserviceConnectionMsg)
 		return
 	}
-	if clientLoginRes.ErrorCode != -1 {
+	if clientLoginRes.ErrorCode != -1 && clientLoginRes.UserID == 0 {
 		// remove any credentials if there is a login error
+		errorCodeStr = strconv.Itoa(int(clientLoginRes.ErrorCode))
 		u.removeCookie(c, constants.Token)
+		SendStandardGatewayResponse(c, span, clientLoginRes.ErrorCode, clientLoginRes.ErrorMsg)
+		return
 	}
 
 	if clientLoginRes.UserID == 0 {
@@ -151,7 +160,7 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 
 // generateToken is a helper function to generate the JWT token for an authenticated user's session.
 func (u *UserServiceController) generateToken(userID int64) (string, time.Time, error) {
-	expirationTime := time.Now().Add(30 * time.Minute)
+	expirationTime := time.Now().Add(time.Duration(u.config.Expiry) * time.Minute)
 	claims := &middleware.Claims{
 		UserID: strconv.FormatInt(userID, 10),
 		StandardClaims: jwt.StandardClaims{
@@ -178,6 +187,14 @@ func (u *UserServiceController) SignupHandler(c *gin.Context) {
 	}))
 	defer func() {
 		timer.ObserveDuration()
+	}()
+
+	// observe response size
+	responseSize := prometheus.ObserverFunc(func(v float64) {
+		metrics.ResponseSize.WithLabelValues(u.config.Label, c.Request.URL.Path, errorCodeStr).Observe(v)
+	})
+	defer func() {
+		responseSize.Observe(float64(c.Writer.Size()))
 	}()
 
 	// remove any token cookies

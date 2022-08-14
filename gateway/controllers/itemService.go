@@ -59,7 +59,7 @@ func (i *ItemServiceController) AddFavHandler(c *gin.Context) {
 
 	// observe response size
 	responseSize := prometheus.ObserverFunc(func(v float64) {
-		metrics.ResponseSize.WithLabelValues(i.config.Label, c.Request.URL.Path, errorCodeStr)
+		metrics.ResponseSize.WithLabelValues(i.config.Label, c.Request.URL.Path, errorCodeStr).Observe(v)
 	})
 	defer func() {
 		responseSize.Observe(float64(c.Writer.Size()))
@@ -152,6 +152,14 @@ func (i *ItemServiceController) DeleteFavHandler(c *gin.Context) {
 	}))
 	defer func() {
 		timer.ObserveDuration()
+	}()
+
+	// observe response size
+	responseSize := prometheus.ObserverFunc(func(v float64) {
+		metrics.ResponseSize.WithLabelValues(i.config.Label, c.Request.URL.Path, errorCodeStr).Observe(v)
+	})
+	defer func() {
+		responseSize.Observe(float64(c.Writer.Size()))
 	}()
 
 	userID := i.getUserID(c, span)

@@ -13,6 +13,7 @@ http:
     host: localhost
     port: 6000
     secret: zhtq0eMHQpyQSZKV2ILyk2gXphHkMeCbBKNu5Xa5yhLHJwEahhcBWKP9to5WXRF
+    expiry: 30 # expiry time for auth cookie in minutes
     urlGroup: /api/user
     apis:
       signup:

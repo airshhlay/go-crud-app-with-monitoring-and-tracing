@@ -23,6 +23,7 @@ type UserServiceConfig struct {
 	Secret   string          `mapstructure:secret`
 	URLGroup string          `mapstructure:urlGroup`
 	APIs     UserServiceAPIs `mapstructure:apis`
+	Expiry   int             `mapstructure:"expiry"`
 }
 
 // UserServiceAPIs defines the public APIs to the user service
