@@ -11,6 +11,8 @@ const (
 	InfoHTTPServerStart = "info_http_server_start"
 	// InfoGRPCServerStart info for logging
 	InfoGRPCServerStart = "info_grpc_server_start"
+	// InfoJaegerInit log info message
+	InfoJaegerInit = "info_jaeger_init"
 
 	// database
 
@@ -31,8 +33,8 @@ const (
 	InfoRedisSet = "info_redis_set"
 	// InfoRedisGet info for logging
 	InfoRedisGet = "info_redis_get"
-	// InfoRedisNotFound info for logging
-	InfoRedisNotFound = "info_redis_item_not_found"
+	// InfoItemNotInRedis info for logging
+	InfoItemNotInRedis = "info_redis_item_not_found"
 
 	// InfoExternalAPICall info for logging
 	InfoExternalAPICall = "info_External_api_call"

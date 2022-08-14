@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"itemService/tracing"
 	"net/http"
 	"strconv"
 
@@ -14,14 +15,23 @@ import (
 	pb "itemService/proto"
 	"net"
 
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+
+	otgrpc "github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/prometheus/client_golang/prometheus"
 
+	ot "github.com/opentracing/opentracing-go"
 	"go.uber.org/zap"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+)
+
+const (
+	addFav     = "itemservice.server.AddFav"
+	deleteFav  = "itemservice.server.DeleteFav"
+	getFavList = "itemservice.server.GetFavList"
 )
 
 // Server struct contains a reference to the handler. Used to start the grpc server.
@@ -33,7 +43,7 @@ type Server struct {
 }
 
 // StartServer initialises the prometheus metrics, starts the HTTP server for the prometheus endpoint and starts the GRPC server.
-func (s *Server) StartServer(config *config.Config, logger *zap.Logger, dbManager *db.DatabaseManager, redisManager *db.RedisManager) {
+func (s *Server) StartServer(config *config.Config, logger *zap.Logger, dbManager *db.DatabaseManager, redisManager *db.RedisManager, tracer ot.Tracer) {
 	s.handler = Handler{
 		config:       config,
 		dbManager:    dbManager,
@@ -56,8 +66,15 @@ func (s *Server) StartServer(config *config.Config, logger *zap.Logger, dbManage
 	http.Handle(config.PrometheusConfig.Endpoint, promhttp.HandlerFor(metrics.Reg, promhttp.HandlerOpts{}))
 
 	grpcServer := grpc.NewServer(
-		grpc.StreamInterceptor(metrics.GrpcMetrics.StreamServerInterceptor()),
-		grpc.UnaryInterceptor(metrics.GrpcMetrics.UnaryServerInterceptor()),
+		grpc.StreamInterceptor(
+			metrics.GrpcMetrics.StreamServerInterceptor(),
+		),
+		grpc.UnaryInterceptor(
+			grpc_middleware.ChainUnaryServer(
+				metrics.GrpcMetrics.UnaryServerInterceptor(),
+				otgrpc.OpenTracingServerInterceptor(tracer),
+			),
+		),
 	)
 	if err != nil {
 		logger.Error(
@@ -108,6 +125,11 @@ func (s *Server) StartServer(config *config.Config, logger *zap.Logger, dbManage
 
 // DeleteFav implements the grpc service method, as defined in service.proto
 func (s *Server) DeleteFav(ctx context.Context, req *pb.DeleteFavReq) (*pb.DeleteFavRes, error) {
+	// start tracing span from context
+	span, ctx := ot.StartSpanFromContext(ctx, deleteFav)
+	s.addSpanTags(span)
+	defer span.Finish()
+
 	errorCodeStr := constants.NilErrorCode
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
 		metrics.RequestDuration.WithLabelValues(s.config.ServiceLabel, constants.DeleteFav, errorCodeStr).Observe(v)
@@ -117,7 +139,7 @@ func (s *Server) DeleteFav(ctx context.Context, req *pb.DeleteFavReq) (*pb.Delet
 		timer.ObserveDuration()
 	}()
 
-	err := s.handler.DeleteFavourite(req.UserID, req.ItemID, req.ShopID)
+	err := s.handler.DeleteFavourite(ctx, req.UserID, req.ItemID, req.ShopID)
 	if err != nil {
 		v, ok := err.(*customErr.Error)
 		if !ok {
@@ -139,6 +161,11 @@ func (s *Server) DeleteFav(ctx context.Context, req *pb.DeleteFavReq) (*pb.Delet
 
 // AddFav implements the grpc service method, as defined in service.proto
 func (s *Server) AddFav(ctx context.Context, req *pb.AddFavReq) (*pb.AddFavRes, error) {
+	// start tracing span from context
+	span, ctx := ot.StartSpanFromContext(ctx, addFav)
+	s.addSpanTags(span)
+	defer span.Finish()
+
 	errorCodeStr := constants.NilErrorCode
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
 		metrics.RequestDuration.WithLabelValues(s.config.ServiceLabel, constants.AddFav, errorCodeStr).Observe(v)
@@ -148,7 +175,7 @@ func (s *Server) AddFav(ctx context.Context, req *pb.AddFavReq) (*pb.AddFavRes, 
 		timer.ObserveDuration()
 	}()
 
-	item, err := s.handler.AddItemToUserFavList(req.ItemID, req.ShopID, req.UserID)
+	item, err := s.handler.AddItemToUserFavList(ctx, req.ItemID, req.ShopID, req.UserID)
 
 	if err != nil {
 		v, ok := err.(*customErr.Error)
@@ -175,6 +202,11 @@ func (s *Server) AddFav(ctx context.Context, req *pb.AddFavReq) (*pb.AddFavRes, 
 
 // GetFavList implements the grpc service method, as defined in service.proto
 func (s *Server) GetFavList(ctx context.Context, req *pb.GetFavListReq) (*pb.GetFavListRes, error) {
+	// start tracing span from context
+	span, ctx := ot.StartSpanFromContext(ctx, getFavList)
+	s.addSpanTags(span)
+	defer span.Finish()
+
 	errorCodeStr := constants.NilErrorCode
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
 		metrics.RequestDuration.WithLabelValues(s.config.ServiceLabel, constants.GetFavList, errorCodeStr).Observe(v)
@@ -184,7 +216,7 @@ func (s *Server) GetFavList(ctx context.Context, req *pb.GetFavListReq) (*pb.Get
 		timer.ObserveDuration()
 	}()
 
-	items, totalPages, err := s.handler.GetUserFavourites(req.UserID, req.Page)
+	items, totalPages, err := s.handler.GetUserFavourites(ctx, req.UserID, req.Page)
 	if err != nil {
 		v, ok := err.(*customErr.Error)
 		if !ok {
@@ -205,4 +237,9 @@ func (s *Server) GetFavList(ctx context.Context, req *pb.GetFavListReq) (*pb.Get
 		Items:      items,
 		TotalPages: totalPages,
 	}, nil
+}
+
+func (s *Server) addSpanTags(span ot.Span) {
+	span.SetTag(tracing.SpanKind, tracing.SpanKindServer)
+	span.SetTag(tracing.Component, tracing.ComponentServer)
 }

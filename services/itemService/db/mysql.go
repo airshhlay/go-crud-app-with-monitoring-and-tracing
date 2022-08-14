@@ -1,16 +1,26 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"itemService/tracing"
 
 	"itemService/config"
 	"itemService/constants"
 	metrics "itemService/metrics"
 
 	"github.com/go-sql-driver/mysql"
+	ot "github.com/opentracing/opentracing-go"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
+)
+
+const (
+	mysqlInsertRow = "databaseManager.InsertRow"
+	mysqlQueryOne  = "databaseManager.QueryOne"
+	mysqlQueryRows = "databaseManager.QueryRows"
+	mysqlDeleteOne = "databaseManager.DeleteOne"
 )
 
 // DatabaseManager is a database manager struct containing a reference to the database connection, zap logger, and the database config
@@ -64,7 +74,11 @@ func InitDatabase(dbConfig *config.DbConfig, logger *zap.Logger) (*DatabaseManag
 }
 
 // QueryOne will query for a single *sql.Row, and write its contents into destination.
-func (dm *DatabaseManager) QueryOne(query string, opName string, destination ...any) error {
+func (dm *DatabaseManager) QueryOne(ctx context.Context, query string, opName string, destination ...any) error {
+	// start tracing span from context
+	span, ctx := ot.StartSpanFromContext(ctx, mysqlQueryOne)
+	dm.addSpanTags(span, query)
+	defer span.Finish()
 	successStr := constants.True
 	// time database query
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
@@ -75,7 +89,7 @@ func (dm *DatabaseManager) QueryOne(query string, opName string, destination ...
 		timer.ObserveDuration()
 	}()
 
-	res := dm.db.QueryRow(query)
+	res := dm.db.QueryRowContext(ctx, query)
 	err := res.Scan(destination...)
 	if err != nil {
 		dm.logger.Error(
@@ -98,7 +112,11 @@ func (dm *DatabaseManager) QueryOne(query string, opName string, destination ...
 }
 
 // QueryRows executes the given query and returns the queried rows.
-func (dm *DatabaseManager) QueryRows(query string, opName string) (*sql.Rows, error) {
+func (dm *DatabaseManager) QueryRows(ctx context.Context, query string, opName string) (*sql.Rows, error) {
+	// start tracing span from context
+	span, ctx := ot.StartSpanFromContext(ctx, mysqlQueryRows)
+	dm.addSpanTags(span, query)
+	defer span.Finish()
 	successStr := constants.True
 	// time database query
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
@@ -108,7 +126,7 @@ func (dm *DatabaseManager) QueryRows(query string, opName string) (*sql.Rows, er
 		// observe duration at the end of this function
 		timer.ObserveDuration()
 	}()
-	rows, err := dm.db.Query(query)
+	rows, err := dm.db.QueryContext(ctx, query)
 	dm.logger.Info(
 		constants.InfoDatabaseQueryRows,
 		zap.String(constants.Query, query),
@@ -118,7 +136,11 @@ func (dm *DatabaseManager) QueryRows(query string, opName string) (*sql.Rows, er
 }
 
 // InsertRow will insert a single row and return its ID.
-func (dm *DatabaseManager) InsertRow(query string, opName string) (int64, error) {
+func (dm *DatabaseManager) InsertRow(ctx context.Context, query string, opName string) (int64, error) {
+	// start tracing span from context
+	span, ctx := ot.StartSpanFromContext(ctx, mysqlInsertRow)
+	dm.addSpanTags(span, query)
+	defer span.Finish()
 	successStr := constants.True
 	// time database query
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
@@ -129,7 +151,7 @@ func (dm *DatabaseManager) InsertRow(query string, opName string) (int64, error)
 		timer.ObserveDuration()
 	}()
 
-	res, err := dm.db.Exec(query)
+	res, err := dm.db.ExecContext(ctx, query)
 
 	if err != nil {
 		dm.logger.Error(
@@ -158,7 +180,11 @@ func (dm *DatabaseManager) InsertRow(query string, opName string) (int64, error)
 }
 
 // DeleteOne deletes a row from the database and returns the number of rows deleted
-func (dm *DatabaseManager) DeleteOne(query string, opName string) (int64, error) {
+func (dm *DatabaseManager) DeleteOne(ctx context.Context, query string, opName string) (int64, error) {
+	// start tracing span from context
+	span, ctx := ot.StartSpanFromContext(ctx, mysqlDeleteOne)
+	dm.addSpanTags(span, query)
+	defer span.Finish()
 	successStr := constants.True
 	// time database query
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
@@ -169,7 +195,7 @@ func (dm *DatabaseManager) DeleteOne(query string, opName string) (int64, error)
 		timer.ObserveDuration()
 	}()
 
-	res, err := dm.db.Exec(query)
+	res, err := dm.db.ExecContext(ctx, query)
 	dm.logger.Info(
 		constants.InfoDatabaseDelete,
 		zap.String(constants.Query, query),
@@ -188,4 +214,12 @@ func (dm *DatabaseManager) DeleteOne(query string, opName string) (int64, error)
 	}
 
 	return res.RowsAffected()
+}
+
+func (dm *DatabaseManager) addSpanTags(span ot.Span, statement string) {
+	span.SetTag(tracing.DatabaseType, tracing.DatabaseTypeSQL)
+	span.SetTag(tracing.DatabaseInstance, dm.config.DbName)
+	span.SetTag(tracing.DatabaseUser, dm.config.User)
+	span.SetTag(tracing.DatabaseStatement, statement)
+	span.SetTag(tracing.Component, tracing.ComponentDB)
 }

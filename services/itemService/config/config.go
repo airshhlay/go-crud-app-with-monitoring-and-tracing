@@ -15,11 +15,12 @@ type Config struct {
 	RedisConfig      RedisConfig      `mapstructure:redis`
 	ExternalConfig   ExternalConfig   `mapstructure:external`
 	PrometheusConfig PrometheusConfig `mapstructure:prometheus`
+	JaegerConfig     JaegerConfig     `mapstructure:jaeger`
 }
 
 // DbConfig holds configurations for the database.
 type DbConfig struct {
-	ServiceLabel string `mapstructure:"serviceLabel"`
+	ServiceLabel string `mapstructure:serviceLabel`
 	Driver       string `mapstructure:driver`
 	Host         string `mapstructure:host`
 	Port         string `mapstructure:port`
@@ -114,6 +115,15 @@ func LoadConfig(logger *zap.Logger) (*Config, error) {
 	if err != nil {
 		logger.Fatal(
 			"Unable to unmarshal into prometheusconfig struct",
+			zap.Error(err),
+		)
+		return nil, err
+	}
+
+	err = viper.UnmarshalKey("jaeger", &config.JaegerConfig)
+	if err != nil {
+		logger.Fatal(
+			"Unable to unmarshal into JaegerConfig struct",
 			zap.Error(err),
 		)
 		return nil, err

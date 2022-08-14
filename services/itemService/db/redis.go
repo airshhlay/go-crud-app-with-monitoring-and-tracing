@@ -1,17 +1,26 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"itemService/config"
 	constants "itemService/constants"
 	errors "itemService/errors"
 	metrics "itemService/metrics"
+	"itemService/tracing"
 	"time"
+
+	ot "github.com/opentracing/opentracing-go"
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/go-redis/redis"
+	redis "github.com/go-redis/redis/v8"
 	"go.uber.org/zap"
+)
+
+const (
+	redisSet = "redis.Set"
+	redisGet = "redis.Get"
 )
 
 // RedisManager is a struct containing a reference to the redis client, logger, and the redis config
@@ -23,6 +32,7 @@ type RedisManager struct {
 
 // InitRedis creates the redis client, initialises and tests the connection
 func InitRedis(redisConfig *config.RedisConfig, logger *zap.Logger) (*RedisManager, error) {
+	ctx := context.Background()
 	cfg := redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", redisConfig.Host, redisConfig.Port),
 		Password: redisConfig.Password,
@@ -31,7 +41,7 @@ func InitRedis(redisConfig *config.RedisConfig, logger *zap.Logger) (*RedisManag
 
 	client := redis.NewClient(&cfg)
 
-	pong, err := client.Ping().Result()
+	pong, err := client.Ping(ctx).Result()
 	if err != nil {
 		logger.Fatal(
 			constants.ErrorRedisConnectionMsg,
@@ -56,7 +66,12 @@ func InitRedis(redisConfig *config.RedisConfig, logger *zap.Logger) (*RedisManag
 }
 
 // Set takes a key of type string and a byte array as a value. exp is used to define an expiry.
-func (rm *RedisManager) Set(key string, bytes []byte, exp time.Duration) error {
+func (rm *RedisManager) Set(ctx context.Context, key string, bytes []byte, exp time.Duration) error {
+	// start tracing span from context
+	span, ctx := ot.StartSpanFromContext(ctx, redisSet)
+	statement := fmt.Sprintf(tracing.DatabaseStatementRedisSet, key, bytes)
+	rm.addSpanTags(span, statement)
+	defer span.Finish()
 	successStr := constants.True
 	// time redis op
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
@@ -67,7 +82,7 @@ func (rm *RedisManager) Set(key string, bytes []byte, exp time.Duration) error {
 	}()
 
 	// call the redis client
-	err := rm.client.Set(key, bytes, exp).Err()
+	err := rm.client.Set(ctx, key, bytes, exp).Err()
 	if err != nil {
 		rm.logger.Error(
 			constants.ErrorRedisSetMsg,
@@ -90,7 +105,12 @@ func (rm *RedisManager) Set(key string, bytes []byte, exp time.Duration) error {
 }
 
 // Get takes a key and returns its associated value in bytes.
-func (rm *RedisManager) Get(key string) ([]byte, error) {
+func (rm *RedisManager) Get(ctx context.Context, key string) ([]byte, error) {
+	// start tracing span from context
+	span, ctx := ot.StartSpanFromContext(ctx, redisGet)
+	statement := fmt.Sprintf(tracing.DatabaseStatementRedisGet, key)
+	rm.addSpanTags(span, statement)
+	defer span.Finish()
 	successStr := constants.True
 	// time redis op
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
@@ -101,7 +121,7 @@ func (rm *RedisManager) Get(key string) ([]byte, error) {
 	}()
 
 	// call the redis client
-	bytes, err := rm.client.Get(key).Bytes()
+	bytes, err := rm.client.Get(ctx, key).Bytes()
 	if err != nil {
 		if err != redis.Nil {
 			// unexpected error occured when getting item
@@ -115,7 +135,7 @@ func (rm *RedisManager) Get(key string) ([]byte, error) {
 			return nil, errors.Error{constants.ErrorRedisGet, constants.ErrorRedisGetMsg, err}
 		}
 		rm.logger.Info(
-			constants.InfoRedisNotFound,
+			constants.InfoItemNotInRedis,
 			zap.String(constants.Key, key),
 		)
 		// item is not in redis
@@ -128,4 +148,12 @@ func (rm *RedisManager) Get(key string) ([]byte, error) {
 		zap.ByteString(constants.Bytes, bytes),
 	)
 	return bytes, err
+}
+
+func (rm *RedisManager) addSpanTags(span ot.Span, statement string) {
+	span.SetTag(tracing.DatabaseType, tracing.DatabaseTypeRedis)
+	span.SetTag(tracing.DatabaseInstance, rm.config.Db)
+	span.SetTag(tracing.DatabaseUser, rm.config.Host)
+	span.SetTag(tracing.DatabaseStatement, statement)
+	span.SetTag(tracing.Component, tracing.ComponentDB)
 }
