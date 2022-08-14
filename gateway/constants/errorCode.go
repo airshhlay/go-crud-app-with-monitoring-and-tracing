@@ -25,7 +25,12 @@ const (
 
 	// ErrorUserserviceConnection service error code
 	ErrorUserserviceConnection = 150011
+	// ErrorItemserviceConnection service error code
 	ErrorItemserviceConnection = 150012
+	// ErrorCreateGRPCChannel service error code
+	ErrorCreateGRPCChannel = 150013
+	// ErrorNoUserIDReturned service error code
+	ErrorNoUserIDReturned = 150014
 	// JWT errors
 
 	// ErrorJWTSignatureInvalid service error code
@@ -40,4 +45,6 @@ const (
 
 	// ErrorParseInt service error code
 	ErrorParseInt = 150041
+	// ErrorTypeAssertion service error code
+	ErrorTypeAssertion = 150051
 )

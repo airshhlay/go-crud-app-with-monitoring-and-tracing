@@ -10,6 +10,8 @@ import (
 	routes "gateway/routes"
 	jaegerTracer "gateway/tracing"
 
+	"github.com/opentracing-contrib/go-gin/ginhttp"
+
 	opentracing "github.com/opentracing/opentracing-go"
 
 	"google.golang.org/grpc/credentials/insecure"
@@ -54,11 +56,11 @@ func main() {
 	// start the grpc server
 	clients := StartGrpcClients(logger, config)
 	// start http server
-	StartHTTPServer(logger, config, clients)
+	StartHTTPServer(logger, config, clients, tracer)
 }
 
 // StartHTTPServer initialise necessary middleware, item service, user service and metrics routes, and starts the HTTP server.
-func StartHTTPServer(logger *zap.Logger, config *config.Config, clients *GrpcClients) {
+func StartHTTPServer(logger *zap.Logger, config *config.Config, clients *GrpcClients, tracer opentracing.Tracer) {
 	if config.GinMode == "release" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -80,6 +82,7 @@ func StartHTTPServer(logger *zap.Logger, config *config.Config, clients *GrpcCli
 	userServiceGroup := server.Group(config.HTTPConfig.UserService.URLGroup)
 	userServiceController := controllers.NewUserServiceController(&config.HTTPConfig.UserService, logger, clients.UserServiceClient)
 	userServiceGroup.Use(middleware.PrometheusMiddleware(config)) // use prometheus middleware
+	userServiceGroup.Use(ginhttp.Middleware(tracer))              // use ginhttp middleware for tracing
 	routes.UserServiceRoutes(userServiceGroup, userServiceController, &config.HTTPConfig.UserService.APIs)
 
 	// Routes for Item Service
@@ -87,6 +90,7 @@ func StartHTTPServer(logger *zap.Logger, config *config.Config, clients *GrpcCli
 	itemServiceController := controllers.NewItemServiceController(&config.HTTPConfig.ItemService, logger, clients.ItemServiceClient)
 	itemServiceGroup.Use(middleware.Authenticate(config.HTTPConfig.UserService.Secret, logger)) // authenticate requests to item service
 	itemServiceGroup.Use(middleware.PrometheusMiddleware(config))                               // use prometheus middleware
+	itemServiceGroup.Use(ginhttp.Middleware(tracer))                                            // use ginhttp middleware for tracing
 	routes.ItemServiceRoutes(itemServiceGroup, itemServiceController, &config.HTTPConfig.ItemService.APIs)
 
 	err := server.Run(fmt.Sprintf(":%s", config.Port))

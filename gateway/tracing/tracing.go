@@ -34,5 +34,6 @@ func InitJaeger(config *config.JaegerConfig, logger *zap.Logger) (opentracing.Tr
 	if err != nil {
 		logger.Fatal(constants.ErrorJaegerInitMsg, zap.Error(err))
 	}
+
 	return tracer, closer, err
 }

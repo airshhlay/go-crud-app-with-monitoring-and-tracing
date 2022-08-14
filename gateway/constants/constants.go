@@ -21,4 +21,10 @@ const (
 	Request = "request"
 	// Username string
 	Username = "username"
+	// Host string
+	Host = "host"
+	// Label string
+	Label = "label"
+	// Port string
+	Port = "port"
 )

@@ -8,7 +8,8 @@ type GrpcConfig struct {
 
 // GrpcServiceConfig defines the config for a grpc client
 type GrpcServiceConfig struct {
-	Label string `mapstructure:label`
-	Host  string `mapstructure:host`
-	Port  string `mapstructure:port`
+	Label string            `mapstructure:label`
+	Host  string            `mapstructure:host`
+	Port  string            `mapstructure:port`
+	Tags  map[string]string `mapstructure:tags`
 }

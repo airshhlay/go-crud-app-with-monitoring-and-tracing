@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"entry-task/gateway/constants"
 	client "gateway/client"
 	config "gateway/config"
 	constants "gateway/constants"
@@ -13,6 +14,8 @@ import (
 	"strconv"
 	"time"
 
+	ot "github.com/opentracing/opentracing-go"
+
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/prometheus/client_golang/prometheus"
 
@@ -21,7 +24,8 @@ import (
 )
 
 const (
-	token = "token"
+	loginHandler  = "gateway.LoginHandler"
+	signupHandler = "gateway.SignupHandler"
 )
 
 // UserServiceController is called to handle incoming HTTP requests directed to the user service.
@@ -43,7 +47,11 @@ func NewUserServiceController(config *config.UserServiceConfig, logger *zap.Logg
 // LoginHandler handles requests to the /user/login endpoint.
 func (u *UserServiceController) LoginHandler(c *gin.Context) {
 	var errorCodeStr string
-	var errorCodeInt int32
+
+	// start tracing span from context
+	span := ot.SpanFromContext(c.Request.Context())
+	u.addSpanTags(span, c)
+	defer span.Finish()
 
 	// observe request latency
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
@@ -62,8 +70,9 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 			zap.Error(err),
 		)
 		u.removeCookie(c, constants.Token)
-		errorCodeInt = constants.ErrorBadRequest
-		c.JSON(200, res.GatewayResponse{ErrorCode: errorCodeInt})
+		errorCodeStr = strconv.Itoa(constants.ErrorInvalidRequest)
+		// add the resulting error code to the span and send a standard gateway response back to the client
+		SendStandardGatewayResponse(c, span, constants.ErrorInvalidRequest, constants.ErrorInvalidRequestMsg)
 		return
 	}
 	u.logger.Info(
@@ -78,11 +87,12 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 	}
 
 	// call user service
-	clientLoginRes, err := u.client.Login(c, clientLoginReq)
+	clientLoginRes, err := u.client.Login(c.Request.Context(), clientLoginReq)
 	if err != nil {
 		u.removeCookie(c, constants.Token)
-		errorCodeInt = constants.ErrorUserserviceConnection
-		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ErrorUserserviceConnection})
+		errorCodeStr = strconv.Itoa(constants.ErrorUserserviceConnection)
+		// add the resulting error code to the span and send a standard gateway response back to the client
+		SendStandardGatewayResponse(c, span, constants.ErrorUserserviceConnection, constants.ErrorUserserviceConnectionMsg)
 		return
 	}
 	if clientLoginRes.ErrorCode != -1 {
@@ -90,39 +100,52 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 		u.removeCookie(c, constants.Token)
 	}
 
-	if clientLoginRes.UserID != 0 {
-		// no error occured
-		tokenString, expirationTime, err := u.generateToken(clientLoginRes.UserID)
-		if err != nil {
-			u.logger.Error(
-				constants.ErrorGenerateJWTTokenMsg,
-				zap.Error(err),
-			)
-			u.removeCookie(c, constants.Token)
-			errorCodeInt = constants.ErrorGenerateJWTToken
-			c.IndentedJSON(200, res.GatewayResponse{ErrorCode: constants.ErrorGenerateJWTToken})
-		} else {
-			// set jwt token in cookie
-			http.SetCookie(
-				c.Writer, &http.Cookie{
-					Name:     constants.Token,
-					Value:    tokenString,
-					Expires:  expirationTime,
-					HttpOnly: true,
-					Path:     "/",
-				},
-			)
-		}
+	if clientLoginRes.UserID == 0 {
+		// userID not created and returned by user service, unexpected error occured
+		errorCodeStr = strconv.Itoa(constants.ErrorNoUserIDReturned)
+		// add the resulting error code to the span and send a standard gateway response back to the client
+		SendStandardGatewayResponse(c, span, constants.ErrorGenerateJWTToken, constants.ErrorNoUserIDReturnedMsg)
+		return
 	}
+
+	// a userID was succesfully created by user service
+	// generate the JWT token containing the userID
+	tokenString, expirationTime, err := u.generateToken(clientLoginRes.UserID)
+	if err != nil {
+		// error occured during token generation
+		u.logger.Error(
+			constants.ErrorGenerateJWTTokenMsg,
+			zap.Error(err),
+		)
+		u.removeCookie(c, constants.Token)
+		errorCodeStr = strconv.Itoa(constants.ErrorGenerateJWTToken)
+		// add the resulting error code to the span and send a standard gateway response back to the client
+		SendStandardGatewayResponse(c, span, constants.ErrorGenerateJWTToken, constants.ErrorGenerateJWTTokenMsg)
+		return
+	}
+
+	// successful token generation
+	// set jwt token in cookie
+	http.SetCookie(
+		c.Writer, &http.Cookie{
+			Name:     constants.Token,
+			Value:    tokenString,
+			Expires:  expirationTime,
+			HttpOnly: true,
+			Path:     "/",
+		},
+	)
 
 	loginRes := res.LoginRes{
 		ErrorCode: clientLoginRes.ErrorCode,
 		ErrorMsg:  clientLoginRes.ErrorMsg,
 	}
-	errorCodeInt = loginRes.ErrorCode
 
 	// convert error code to string for metrics
-	errorCodeStr = strconv.Itoa(int(errorCodeInt))
+	errorCodeStr = strconv.Itoa(int(loginRes.ErrorCode))
+	// add resulting errorCode to span
+	AddErrorTagsToSpan(span, loginRes.ErrorCode, loginRes.ErrorMsg)
+	// return response
 	c.IndentedJSON(200, loginRes)
 }
 
@@ -144,7 +167,10 @@ func (u *UserServiceController) generateToken(userID int64) (string, time.Time, 
 // SignupHandler handles incoming requests to the /user/signup endpoint.
 func (u *UserServiceController) SignupHandler(c *gin.Context) {
 	var errorCodeStr string
-	var errorCodeInt int32
+	// start tracing span from context
+	span := ot.SpanFromContext(c.Request.Context())
+	u.addSpanTags(span, c)
+	defer span.Finish()
 
 	// observe request latency
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
@@ -165,8 +191,9 @@ func (u *UserServiceController) SignupHandler(c *gin.Context) {
 			zap.Error(err),
 		)
 		u.removeCookie(c, constants.Token)
-		errorCodeInt = constants.ErrorBadRequest
-		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ErrorBadRequest})
+		errorCodeStr = strconv.Itoa(constants.ErrorBadRequest)
+		// add the resulting error code to the span and send a standard gateway response back to the client
+		SendStandardGatewayResponse(c, span, constants.ErrorInvalidRequest, constants.ErrorInvalidRequestMsg)
 		return
 	}
 	u.logger.Info(
@@ -180,20 +207,24 @@ func (u *UserServiceController) SignupHandler(c *gin.Context) {
 		Password: signupReq.Password,
 	}
 	// call user service
-	clientLoginRes, err := u.client.Signup(c, clientSignupReq)
+	clientLoginRes, err := u.client.Signup(c.Request.Context(), clientSignupReq)
 	if err != nil {
-		errorCodeInt = constants.ErrorUserserviceConnection
+		errorCodeStr = strconv.Itoa(constants.ErrorUserserviceConnection)
 		u.removeCookie(c, constants.Token)
-		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ErrorUserserviceConnection})
+		// add the resulting error code to the span and send a standard gateway response back to the client
+		SendStandardGatewayResponse(c, span, constants.ErrorUserserviceConnection, constants.ErrorUserserviceConnectionMsg)
 		return
 	}
 	if clientLoginRes.ErrorCode != 0 {
 		u.removeCookie(c, constants.Token)
 	}
 
-	errorCodeInt = clientLoginRes.ErrorCode
 	// convert error code to string for metrics
-	errorCodeStr = strconv.Itoa(int(errorCodeInt))
+	errorCodeStr = strconv.Itoa(int(clientLoginRes.ErrorCode))
+
+	// add the resulting error code to the span
+	AddErrorTagsToSpan(span, clientLoginRes.ErrorCode, clientLoginRes.ErrorMsg)
+	// return response
 	c.JSON(200, clientLoginRes)
 }
 
@@ -206,4 +237,8 @@ func (u *UserServiceController) removeCookie(c *gin.Context, cookieName string) 
 			MaxAge: -1,
 		},
 	)
+}
+
+func (u *UserServiceController) addSpanTags(span ot.Span, c *gin.Context) {
+	// TODO: add additional tags if needed
 }

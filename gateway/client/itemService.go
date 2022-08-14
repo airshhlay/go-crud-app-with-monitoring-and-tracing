@@ -2,14 +2,23 @@ package client
 
 import (
 	"context"
+	"entry-task/gateway/tracing"
 	"fmt"
 	config "gateway/config"
+	"gateway/constants"
 	proto "gateway/proto"
+	"gateway/tracing"
 
-	opentracing "github.com/opentracing/opentracing-go"
+	ot "github.com/opentracing/opentracing-go"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+)
+
+const (
+	addFavClient     = "gateway.AddFavClient"
+	deleteFavClient  = "gateway.DeleteFavClient"
+	getFavListClient = "gateway.GetFavListClient"
 )
 
 // ItemServiceClient serves as a wrapper for the grpc client to the item service grpc server
@@ -32,13 +41,13 @@ func (i *ItemServiceClient) StartClient(opts []grpc.DialOption) error {
 	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", i.config.Host, i.config.Port), opts...)
 	if err != nil {
 		i.logger.Fatal(
-			"error_create_grpc_channel",
-			zap.String("label", i.config.Label),
-			zap.String("host", i.config.Host),
-			zap.String("port", i.config.Port),
+			constants.ErrorCreateGRPCChannelMsg,
+			zap.String(constants.Label, i.config.Label),
+			zap.String(constants.Host, i.config.Host),
+			zap.String(constants.Port, i.config.Port),
 			zap.Error(err),
 		)
-		panic(err)
+		return err
 	}
 
 	// defer conn.Close()
@@ -47,10 +56,10 @@ func (i *ItemServiceClient) StartClient(opts []grpc.DialOption) error {
 	i.client = client
 
 	i.logger.Info(
-		"info_grpc_client_start",
-		zap.String("label", i.config.Label),
-		zap.String("host", i.config.Host),
-		zap.String("port", i.config.Port),
+		constants.InfoGRPCClientStart,
+		zap.String(constants.Label, i.config.Label),
+		zap.String(constants.Host, i.config.Host),
+		zap.String(constants.Port, i.config.Port),
 	)
 
 	return err
@@ -58,17 +67,36 @@ func (i *ItemServiceClient) StartClient(opts []grpc.DialOption) error {
 
 // AddFav calls the item service's method with the defined AddFavReq
 func (i *ItemServiceClient) AddFav(ctx context.Context, req *proto.AddFavReq) (*proto.AddFavRes, error) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "user.Create")
+	// start span from context
+	span, ctx := ot.StartSpanFromContext(ctx, signupClient)
+	i.addSpanTags(span)
 	defer span.Finish()
+
 	return i.client.AddFav(ctx, req)
 }
 
 // DeleteFav calls the item service's method with the defined DeleteFavReq
 func (i *ItemServiceClient) DeleteFav(ctx context.Context, req *proto.DeleteFavReq) (*proto.DeleteFavRes, error) {
+	// start span from context
+	span, ctx := ot.StartSpanFromContext(ctx, signupClient)
+	i.addSpanTags(span)
+	defer span.Finish()
+
 	return i.client.DeleteFav(ctx, req)
 }
 
 // GetFavList calls the item service's method with the defined GetFavList
 func (i *ItemServiceClient) GetFavList(ctx context.Context, req *proto.GetFavListReq) (*proto.GetFavListRes, error) {
+	// start span from context
+	span, ctx := ot.StartSpanFromContext(ctx, signupClient)
+	i.addSpanTags(span)
+	defer span.Finish()
+
 	return i.client.GetFavList(ctx, req)
+}
+
+func (i *ItemServiceClient) addSpanTags(span ot.Span) {
+	span.SetTag(tracing.SpanKind, tracing.SpanKindClient)
+	span.SetTag(tracing.Component, tracing.ComponentGrpc)
+	span.SetTag(tracing.PeerService, tracing.PeerServiceItemService)
 }
