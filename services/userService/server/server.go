@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	grpcSignup = "userservice.grpc.signup"
-	grpcLogin  = "userservice.grpc.login"
+	grpcSignup = "userservice.server.Signup"
+	grpcLogin  = "userservice.server.Login"
 )
 
 // Server struct contains a reference to the handler. Used to start the grpc server.
@@ -201,5 +201,5 @@ func (s *Server) Login(ctx context.Context, req *pb.LoginReq) (*pb.LoginRes, err
 
 func (s *Server) addSpanTags(span ot.Span) {
 	span.SetTag(tracing.SpanKind, tracing.SpanKindServer)
-	span.SetTag(tracing.Component, tracing.ComponentGrpc)
+	span.SetTag(tracing.Component, tracing.ComponentServer)
 }

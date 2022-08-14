@@ -7,8 +7,10 @@ const (
 	// DatabaseTypeSQL for <db.type>
 	DatabaseTypeSQL = "sql"
 
-	// ComponentGrpc for <component>
-	ComponentGrpc = "grpc"
+	// ComponentServer for <component>
+	ComponentServer = "userService.server"
+	// ComponentDB for <component>
+	ComponentDB = "userService.db"
 
 	// PeerServiceUserService for <peer.service>
 	PeerServiceMySQL = "mysql"

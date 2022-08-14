@@ -156,4 +156,5 @@ func (dm *DatabaseManager) addSpanTags(span ot.Span, statement string) {
 	span.SetTag(tracing.DatabaseInstance, dm.config.DbName)
 	span.SetTag(tracing.DatabaseUser, dm.config.User)
 	span.SetTag(tracing.DatabaseStatement, statement)
+	span.SetTag(tracing.Component, tracing.ComponentDB)
 }
