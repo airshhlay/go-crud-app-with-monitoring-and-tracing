@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"entry-task/gateway/constants"
+	"fmt"
 	client "gateway/client"
 	config "gateway/config"
 	constants "gateway/constants"
@@ -24,8 +24,8 @@ import (
 )
 
 const (
-	loginHandler  = "gateway.LoginHandler"
-	signupHandler = "gateway.SignupHandler"
+	loginHandler  = "handler.LoginHandler"
+	signupHandler = "handler.SignupHandler"
 )
 
 // UserServiceController is called to handle incoming HTTP requests directed to the user service.
@@ -47,7 +47,6 @@ func NewUserServiceController(config *config.UserServiceConfig, logger *zap.Logg
 // LoginHandler handles requests to the /user/login endpoint.
 func (u *UserServiceController) LoginHandler(c *gin.Context) {
 	var errorCodeStr string
-
 	// start tracing span from context
 	span := ot.SpanFromContext(c.Request.Context())
 	u.addSpanTags(span, c)
@@ -87,6 +86,7 @@ func (u *UserServiceController) LoginHandler(c *gin.Context) {
 	}
 
 	// call user service
+	fmt.Println("GATEWAY CONTEXT: ", c.Request.Context())
 	clientLoginRes, err := u.client.Login(c.Request.Context(), clientLoginReq)
 	if err != nil {
 		u.removeCookie(c, constants.Token)

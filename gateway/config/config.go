@@ -10,8 +10,8 @@ type Config struct {
 	Hostname         string           `mapstructure:"hostname"`
 	Port             string           `mapstructure:"port"`
 	GinMode          string           `mapstructure:"ginMode"`
-	TrustedProxies   []string         `mapstructure:trustedProxies`
-	AllowedOrigins   []string         `mapstructure:allowedOrigins`
+	TrustedProxies   []string         `mapstructure:"trustedProxies"`
+	AllowedOrigins   []string         `mapstructure:"allowedOrigins"`
 	HTTPConfig       HTTPConfig       `mapstructure:"http"`
 	GrpcConfig       GrpcConfig       `mapstructure:"grpc"`
 	PrometheusConfig PrometheusConfig `mapstructure:"prometheus"`
@@ -66,6 +66,15 @@ func LoadConfig(logger *zap.Logger) (*Config, error) {
 	if err != nil {
 		logger.Fatal(
 			"Unable to unmarshal into PrometheusConfig struct",
+			zap.Error(err),
+		)
+		return nil, err
+	}
+
+	err = viper.UnmarshalKey("jaeger", &config.JaegerConfig)
+	if err != nil {
+		logger.Fatal(
+			"Unable to unmarshal into JaegerConfig struct",
 			zap.Error(err),
 		)
 		return nil, err

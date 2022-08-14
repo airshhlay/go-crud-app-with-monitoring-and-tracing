@@ -10,10 +10,10 @@ import (
 	routes "gateway/routes"
 	jaegerTracer "gateway/tracing"
 
+	otgrpc "github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
+
 	"github.com/opentracing-contrib/go-gin/ginhttp"
-
-	opentracing "github.com/opentracing/opentracing-go"
-
+	ot "github.com/opentracing/opentracing-go"
 	"google.golang.org/grpc/credentials/insecure"
 
 	"google.golang.org/grpc"
@@ -47,20 +47,20 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	opentracing.SetGlobalTracer(tracer)
+	ot.SetGlobalTracer(tracer)
 	logger.Info(constants.InfoJaegerInit)
 	defer closer.Close()
 
 	// initialise metrics metrics
 	metrics.Init()
 	// start the grpc server
-	clients := StartGrpcClients(logger, config)
+	clients := StartGrpcClients(logger, config, tracer)
 	// start http server
 	StartHTTPServer(logger, config, clients, tracer)
 }
 
 // StartHTTPServer initialise necessary middleware, item service, user service and metrics routes, and starts the HTTP server.
-func StartHTTPServer(logger *zap.Logger, config *config.Config, clients *GrpcClients, tracer opentracing.Tracer) {
+func StartHTTPServer(logger *zap.Logger, config *config.Config, clients *GrpcClients, tracer ot.Tracer) {
 	if config.GinMode == "release" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -109,8 +109,12 @@ func StartHTTPServer(logger *zap.Logger, config *config.Config, clients *GrpcCli
 }
 
 // StartGrpcClients starts the grpc client connections to the microservice grpc servers. It returns a reference to the GrpcClients struct.
-func StartGrpcClients(logger *zap.Logger, config *config.Config) *GrpcClients {
-	generalOpts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+func StartGrpcClients(logger *zap.Logger, config *config.Config, tracer ot.Tracer) *GrpcClients {
+	generalOpts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(otgrpc.OpenTracingClientInterceptor(tracer)),
+		// grpc.WithStreamInterceptor(otgrpc.OpenTracingStreamClientInterceptor(tracer)),
+	}
 	// user service client
 	userServiceClient := client.GetUserServiceClient(logger, &config.GrpcConfig.UserService)
 	err := userServiceClient.StartClient(generalOpts)

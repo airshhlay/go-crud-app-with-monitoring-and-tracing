@@ -20,3 +20,7 @@ prometheus:
   port: 6001
   endpoint: /metrics
   
+jaeger:
+  host: docker.for.mac.host.internal:6831
+  serviceName: userservice
+  logSpans: true

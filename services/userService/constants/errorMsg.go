@@ -21,4 +21,6 @@ const (
 	ErrorUserPasswordMsg = "error_user_password"
 	// ErrorTypecastMsg for errors typecasting error to customErr
 	ErrorTypecastMsg = "error_typecast"
+	// ErrorJaegerInitMsg service error message
+	ErrorJaegerInitMsg = "error_jaeger_init"
 )

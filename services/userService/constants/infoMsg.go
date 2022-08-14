@@ -9,6 +9,9 @@ const (
 	InfoServerStart = "info_server_start_success"
 	// InfoPromServerStart message for logging
 	InfoPromServerStart = "info_prom_server_start"
+	// InfoJaegerInit log info message
+	InfoJaegerInit = "info_jaeger_init"
+
 	// user
 
 	// InfoUserAdd message for logging

@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"entry-task/gateway/tracing"
 	"fmt"
 	config "gateway/config"
 	"gateway/constants"
