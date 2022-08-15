@@ -1,20 +1,20 @@
 import React from "react";
-import { message, Card, Button, Row, Col, Input, Form } from "antd";
+import { Button, Row, Col, Input, Form } from "antd";
 import { WarningOutlined } from "@ant-design/icons";
 import { signup } from "./api/auth";
 export default function Signup(props) {
   const [errorMessage, setErrorMessage] = React.useState("")
 
   const onFinish = (values) => {
-    username = values.username
-    password = values.password
+    var username = values.username
+    var password = values.password
     if (!username || !password) {
-      setErrorMessage("Username and/or password can not be blank.")
+      return setErrorMessage("Username and/or password can not be blank.")
     }
     if (username.length > 15 || username.length < 3) {
-      setErrorMessage("Username must be 3 to 15s characters long!")
+      return setErrorMessage("Username must be 3 to 15s characters long!")
     } else if (password.length < 8 || password.length > 20) {
-      setErrorMessage("Password should be 8 to 20 characters long!")
+      return setErrorMessage("Password should be 8 to 20 characters long!")
     }
     signup(values.username, values.password)
       .then((res) => {
