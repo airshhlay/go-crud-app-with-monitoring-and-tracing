@@ -1,6 +1,7 @@
 package shopee
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -8,16 +9,31 @@ import (
 	constants "itemService/constants"
 	errors "itemService/errors"
 	metrics "itemService/metrics"
+	"itemService/tracing"
 	"net/http"
 	"strconv"
+
+	ot "github.com/opentracing/opentracing-go"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 )
 
+const (
+	fetchItemPrice = "shopee.FetchItemPrice"
+	component      = "itemService.external"
+)
+
 // FetchItemPrice makes a call to the Shopee API to fetch an item's information, including its name, price, image, rating etc.
 // It takes in an itemID and a shopID
-func FetchItemPrice(config *config.Shopee, logger *zap.Logger, itemID int64, shopID int64) (*GetItemRes, error) {
+func FetchItemPrice(ctx context.Context, config *config.Shopee, logger *zap.Logger, itemID int64, shopID int64) (*GetItemRes, error) {
+	// start tracing span from context
+	// ignore outgoing context
+	span, _ := ot.StartSpanFromContext(ctx, fetchItemPrice)
+	// add span tags
+	span.SetTag(tracing.SpanKind, tracing.SpanKindClient)
+	span.SetTag(tracing.Component, tracing.ComponentExternal)
+	defer span.Finish()
 	// time the request
 	successStr := "true" // for the metric label "success"
 	errorCodeStr := "0"  // for the metric label "errorCode"
@@ -28,9 +44,9 @@ func FetchItemPrice(config *config.Shopee, logger *zap.Logger, itemID int64, sho
 		timer.ObserveDuration()
 	}()
 
-	// TODO: add custom error messages for io error, unmarshalling error etc
 	// make external api call
 	endpoint := fmt.Sprintf("%s?itemID=%d&shopID=%d", config.GetItem.Endpoint, itemID, shopID)
+	span.SetTag(tracing.PeerAddress, endpoint)
 	raw, err := http.Get(endpoint)
 	if err != nil {
 		// error occured when making get request

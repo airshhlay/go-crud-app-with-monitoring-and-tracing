@@ -27,6 +27,10 @@ const (
 	ErrorServerStartFailMsg = "error_server_start_fail"
 	// ErrorUserserviceConnectionMsg service error message
 	ErrorUserserviceConnectionMsg = "error_userservice_connection"
+	// ErrorItemserviceConnectionMsg service error message
+	ErrorItemserviceConnectionMsg = "error_itemservice_connection"
+	// ErrorNoUserIDReturnedMsg service error message
+	ErrorNoUserIDReturnedMsg = "error_no_userid_returned"
 	// ErrorGrpcClientStartFailMsg service error message
 	ErrorGrpcClientStartFailMsg = "error_grpc_client_start_fail"
 	// ErrorJaegerInitMsg service error message
@@ -41,4 +45,8 @@ const (
 	ErrorNoUserIDInTokenMsg = "error_no_userid_in_token"
 	// ErrorParseIntMsg service error message
 	ErrorParseIntMsg = "error_parse_int"
+	// ErrorTypeAssertionMsg service error message
+	ErrorTypeAssertionMsg = "error_type_assertion"
+	// ErrorCreateGRPCChannelMsg service error message
+	ErrorCreateGRPCChannelMsg = "error_create_grpc_channel"
 )

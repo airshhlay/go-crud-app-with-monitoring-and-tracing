@@ -4,7 +4,10 @@ import (
 	"itemService/config"
 	"itemService/constants"
 	"itemService/db"
+	jaegerTracer "itemService/tracing"
 	"log"
+
+	ot "github.com/opentracing/opentracing-go"
 
 	"go.uber.org/zap"
 
@@ -39,11 +42,21 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	// init jaeger
+	tracer, closer, err := jaegerTracer.InitJaeger(&config.JaegerConfig, logger)
+	if err != nil {
+		panic(err)
+	}
+	ot.SetGlobalTracer(tracer)
+	logger.Info(constants.InfoJaegerInit)
+	defer closer.Close()
+
 	// create server struct
 	server := server.Server{}
 
 	// start grpc server
-	server.StartServer(config, logger, dbManager, redisManager)
+	server.StartServer(config, logger, dbManager, redisManager, tracer)
 }
 
 func newLogger() (*zap.Logger, error) {

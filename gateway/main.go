@@ -10,8 +10,10 @@ import (
 	routes "gateway/routes"
 	jaegerTracer "gateway/tracing"
 
-	opentracing "github.com/opentracing/opentracing-go"
+	otgrpc "github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 
+	"github.com/opentracing-contrib/go-gin/ginhttp"
+	ot "github.com/opentracing/opentracing-go"
 	"google.golang.org/grpc/credentials/insecure"
 
 	"google.golang.org/grpc"
@@ -45,20 +47,20 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	opentracing.SetGlobalTracer(tracer)
+	ot.SetGlobalTracer(tracer)
 	logger.Info(constants.InfoJaegerInit)
 	defer closer.Close()
 
 	// initialise metrics metrics
 	metrics.Init()
 	// start the grpc server
-	clients := StartGrpcClients(logger, config)
+	clients := StartGrpcClients(logger, config, tracer)
 	// start http server
-	StartHTTPServer(logger, config, clients)
+	StartHTTPServer(logger, config, clients, tracer)
 }
 
 // StartHTTPServer initialise necessary middleware, item service, user service and metrics routes, and starts the HTTP server.
-func StartHTTPServer(logger *zap.Logger, config *config.Config, clients *GrpcClients) {
+func StartHTTPServer(logger *zap.Logger, config *config.Config, clients *GrpcClients, tracer ot.Tracer) {
 	if config.GinMode == "release" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -80,6 +82,7 @@ func StartHTTPServer(logger *zap.Logger, config *config.Config, clients *GrpcCli
 	userServiceGroup := server.Group(config.HTTPConfig.UserService.URLGroup)
 	userServiceController := controllers.NewUserServiceController(&config.HTTPConfig.UserService, logger, clients.UserServiceClient)
 	userServiceGroup.Use(middleware.PrometheusMiddleware(config)) // use prometheus middleware
+	userServiceGroup.Use(ginhttp.Middleware(tracer))              // use ginhttp middleware for tracing
 	routes.UserServiceRoutes(userServiceGroup, userServiceController, &config.HTTPConfig.UserService.APIs)
 
 	// Routes for Item Service
@@ -87,6 +90,7 @@ func StartHTTPServer(logger *zap.Logger, config *config.Config, clients *GrpcCli
 	itemServiceController := controllers.NewItemServiceController(&config.HTTPConfig.ItemService, logger, clients.ItemServiceClient)
 	itemServiceGroup.Use(middleware.Authenticate(config.HTTPConfig.UserService.Secret, logger)) // authenticate requests to item service
 	itemServiceGroup.Use(middleware.PrometheusMiddleware(config))                               // use prometheus middleware
+	itemServiceGroup.Use(ginhttp.Middleware(tracer))                                            // use ginhttp middleware for tracing
 	routes.ItemServiceRoutes(itemServiceGroup, itemServiceController, &config.HTTPConfig.ItemService.APIs)
 
 	err := server.Run(fmt.Sprintf(":%s", config.Port))
@@ -105,8 +109,12 @@ func StartHTTPServer(logger *zap.Logger, config *config.Config, clients *GrpcCli
 }
 
 // StartGrpcClients starts the grpc client connections to the microservice grpc servers. It returns a reference to the GrpcClients struct.
-func StartGrpcClients(logger *zap.Logger, config *config.Config) *GrpcClients {
-	generalOpts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+func StartGrpcClients(logger *zap.Logger, config *config.Config, tracer ot.Tracer) *GrpcClients {
+	generalOpts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(otgrpc.OpenTracingClientInterceptor(tracer)),
+		// grpc.WithStreamInterceptor(otgrpc.OpenTracingStreamClientInterceptor(tracer)),
+	}
 	// user service client
 	userServiceClient := client.GetUserServiceClient(logger, &config.GrpcConfig.UserService)
 	err := userServiceClient.StartClient(generalOpts)

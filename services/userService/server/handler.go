@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"userService/config"
@@ -11,6 +12,11 @@ import (
 	"go.uber.org/zap"
 
 	"golang.org/x/crypto/bcrypt"
+)
+
+const (
+	createNewUser = "handler.CreateNewUser"
+	verifyLogin   = "handler.VerifyLogin"
 )
 
 // Handler is a helper called by Server to handle various functions.
@@ -25,8 +31,8 @@ type Handler struct {
 // First encrypts the user's given password, and inserts the new row into the database.
 // If successful, returns the userID.
 // Else, returns an error.
-func (h *Handler) CreateNewUser(username string, password string) (int64, error) {
-	exists, _, err := h.checkUserExists(username)
+func (h *Handler) CreateNewUser(ctx context.Context, username string, password string) (int64, error) {
+	exists, _, err := h.checkUserExists(ctx, username)
 	if err != nil {
 		// error occured when querying database
 		return 0, &customErr.Error{
@@ -55,7 +61,7 @@ func (h *Handler) CreateNewUser(username string, password string) (int64, error)
 	}
 
 	// insert user into database
-	id, err := h.insertNewUser(username, hash)
+	id, err := h.insertNewUser(ctx, username, hash)
 
 	h.logger.Info(
 		constants.InfoUserAdd,
@@ -73,9 +79,9 @@ func (h *Handler) CreateNewUser(username string, password string) (int64, error)
 // Verifies the user's given password gainst the hash in the database,
 // and returns the userID if passwords match.
 // Else, returns an error.
-func (h *Handler) VerifyLogin(username string, password string) (int64, error) {
+func (h *Handler) VerifyLogin(ctx context.Context, username string, password string) (int64, error) {
 	// retrieve the user
-	exists, user, err := h.checkUserExists(username)
+	exists, user, err := h.checkUserExists(ctx, username)
 	if err != nil {
 		// error occured when querying database
 		return 0, &customErr.Error{
@@ -119,8 +125,8 @@ func (h *Handler) VerifyLogin(username string, password string) (int64, error) {
 // checkUserExists is a helper function.
 // Checks if the user exists.
 // Returns true if the user exists, and false otherwise.
-func (h *Handler) checkUserExists(username string) (bool, db.User, error) {
-	user, query, err := h.retrieveUserByUsername(username)
+func (h *Handler) checkUserExists(ctx context.Context, username string) (bool, db.User, error) {
+	user, query, err := h.retrieveUserByUsername(ctx, username)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -146,21 +152,21 @@ func (h *Handler) checkUserExists(username string) (bool, db.User, error) {
 // retrieveUserByUsername is a helper function that retrieves users from the database based on username.
 // Returns the user if succesful, else returns an error.
 // Also returns the query used for logging purposes.
-func (h *Handler) retrieveUserByUsername(username string) (db.User, string, error) {
+func (h *Handler) retrieveUserByUsername(ctx context.Context, username string) (db.User, string, error) {
 	var user db.User
 
 	query := fmt.Sprintf("SELECT * FROM users WHERE username='%s'", username)
-	err := h.dbManager.QueryOne(query, constants.GetUserByUsername, &user.UserID, &user.Username, &user.Password)
+	err := h.dbManager.QueryOne(ctx, query, constants.GetUserByUsername, &user.UserID, &user.Username, &user.Password)
 	// err := res.Scan(&user.UserID, &user.Username, &user.Password)
 
 	return user, query, err
 }
 
 // insertNewUser is a helper function to insert a new user into the database. It returs the last inserted ID, as well as an error if any.
-func (h *Handler) insertNewUser(username string, hash []byte) (int64, error) {
+func (h *Handler) insertNewUser(ctx context.Context, username string, hash []byte) (int64, error) {
 	query := fmt.Sprintf("INSERT INTO users(username, password) VALUES ('%s', '%s')", username, hash)
 
-	id, err := h.dbManager.InsertRow(query, constants.AddUser)
+	id, err := h.dbManager.InsertRow(ctx, query, constants.AddUser)
 	if err != nil {
 		// error occured when inserting user into database
 		return 0, &customErr.Error{

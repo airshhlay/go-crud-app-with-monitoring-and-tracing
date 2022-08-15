@@ -1,9 +1,9 @@
 package tracing
 
 import (
-	config "gateway/config"
-	constants "gateway/constants"
 	"io"
+	config "userService/config"
+	constants "userService/constants"
 
 	opentracing "github.com/opentracing/opentracing-go"
 	jaeger "github.com/uber/jaeger-client-go"

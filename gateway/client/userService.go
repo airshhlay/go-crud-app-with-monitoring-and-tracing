@@ -4,10 +4,21 @@ import (
 	"context"
 	"fmt"
 	config "gateway/config"
+	"gateway/constants"
 	proto "gateway/proto"
+	"gateway/tracing"
 
+	ot "github.com/opentracing/opentracing-go"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+)
+
+const (
+	component    = "gin"
+	peerService  = "gateway"
+	spanKind     = "client"
+	signupClient = "gateway.SignupClient"
+	loginClient  = "gateway.LoginClient"
 )
 
 // UserServiceClient serves as a wrapper for the grpc client to the item service grpc server
@@ -30,13 +41,13 @@ func (u *UserServiceClient) StartClient(opts []grpc.DialOption) error {
 	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", u.config.Host, u.config.Port), opts...)
 	if err != nil {
 		u.logger.Fatal(
-			"error_create_grpc_channel",
-			zap.String("label", u.config.Label),
-			zap.String("host", u.config.Host),
-			zap.String("port", u.config.Port),
+			constants.ErrorCreateGRPCChannelMsg,
+			zap.String(constants.Label, u.config.Label),
+			zap.String(constants.Host, u.config.Host),
+			zap.String(constants.Port, u.config.Port),
 			zap.Error(err),
 		)
-		panic(err)
+		return err
 	}
 
 	// defer conn.Close()
@@ -45,10 +56,10 @@ func (u *UserServiceClient) StartClient(opts []grpc.DialOption) error {
 	u.client = client
 
 	u.logger.Info(
-		"info_grpc_client_start",
-		zap.String("label", u.config.Label),
-		zap.String("host", u.config.Host),
-		zap.String("port", u.config.Port),
+		constants.InfoGRPCClientStart,
+		zap.String(constants.Label, u.config.Label),
+		zap.String(constants.Host, u.config.Host),
+		zap.String(constants.Port, u.config.Port),
 	)
 
 	return err
@@ -56,18 +67,28 @@ func (u *UserServiceClient) StartClient(opts []grpc.DialOption) error {
 
 // Signup calls the user service's method with the defined SignupReq
 func (u *UserServiceClient) Signup(ctx context.Context, req *proto.SignupReq) (*proto.SignupRes, error) {
-	// get signup request
+	// start span from context
+	span, ctx := ot.StartSpanFromContext(ctx, signupClient)
+	u.addSpanTags(span)
+	defer span.Finish()
+
+	// send the request to user service
 	return u.client.Signup(ctx, req)
 }
 
 // Login calls the user service's method with the defined LoginReq
 func (u *UserServiceClient) Login(ctx context.Context, req *proto.LoginReq) (*proto.LoginRes, error) {
-	res, err := u.client.Login(ctx, req)
-	if err != nil {
-		u.logger.Error(
-			"error_userservice_login",
-			zap.Error(err),
-		)
-	}
-	return res, err
+	// start span from context
+	span, ctx := ot.StartSpanFromContext(ctx, loginClient)
+	u.addSpanTags(span)
+
+	defer span.Finish()
+	// send the request to user service
+	return u.client.Login(ctx, req)
+}
+
+func (u *UserServiceClient) addSpanTags(span ot.Span) {
+	span.SetTag(tracing.SpanKind, tracing.SpanKindClient)
+	span.SetTag(tracing.Component, tracing.ComponentGrpc)
+	span.SetTag(tracing.PeerService, tracing.PeerServiceUserService)
 }

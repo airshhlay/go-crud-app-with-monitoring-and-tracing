@@ -3,6 +3,8 @@ package constants
 const (
 	// InfoInfoHTTPServerStart log info message
 	InfoInfoHTTPServerStart = "info_http_server_start"
+	// InfoGRPCClientStart log info message
+	InfoGRPCClientStart = "info_grpc_client_start"
 	// InfoJaegerInit log info message
 	InfoJaegerInit = "info_jaeger_init"
 	// InfoNoTokenReceived log info message

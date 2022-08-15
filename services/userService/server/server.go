@@ -9,18 +9,28 @@ import (
 	"userService/config"
 	constants "userService/constants"
 	"userService/db"
+	"userService/tracing"
+
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+
+	otgrpc "github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 
 	customErr "userService/errors"
 	metrics "userService/metrics"
 	pb "userService/proto"
 
+	ot "github.com/opentracing/opentracing-go"
 	"github.com/prometheus/client_golang/prometheus"
-
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+)
+
+const (
+	grpcSignup = "userservice.server.Signup"
+	grpcLogin  = "userservice.server.Login"
 )
 
 // Server struct contains a reference to the handler. Used to start the grpc server.
@@ -32,7 +42,7 @@ type Server struct {
 }
 
 // StartServer initialises the prometheus metrics, starts the HTTP server for the prometheus endpoint and starts the GRPC server.
-func (s *Server) StartServer(config *config.Config, dbManager *db.DatabaseManager, logger *zap.Logger) {
+func (s *Server) StartServer(config *config.Config, dbManager *db.DatabaseManager, logger *zap.Logger, tracer ot.Tracer) {
 	s.handler = Handler{
 		config:    config,
 		dbManager: dbManager,
@@ -56,8 +66,15 @@ func (s *Server) StartServer(config *config.Config, dbManager *db.DatabaseManage
 
 	// Create a gRPC Server with gRPC interceptor.
 	grpcServer := grpc.NewServer(
-		grpc.StreamInterceptor(metrics.GrpcMetrics.StreamServerInterceptor()),
-		grpc.UnaryInterceptor(metrics.GrpcMetrics.UnaryServerInterceptor()),
+		grpc.StreamInterceptor(
+			metrics.GrpcMetrics.StreamServerInterceptor(),
+		),
+		grpc.UnaryInterceptor(
+			grpc_middleware.ChainUnaryServer(
+				metrics.GrpcMetrics.UnaryServerInterceptor(),
+				otgrpc.OpenTracingServerInterceptor(tracer),
+			),
+		),
 	)
 	if err != nil {
 		logger.Error(
@@ -104,6 +121,11 @@ func (s *Server) StartServer(config *config.Config, dbManager *db.DatabaseManage
 
 // Signup is the implementation of the grpc server service, as defined in service.proto
 func (s *Server) Signup(ctx context.Context, req *pb.SignupReq) (*pb.SignupRes, error) {
+	// start tracing span from context
+	span, ctx := ot.StartSpanFromContext(ctx, grpcSignup)
+	s.addSpanTags(span)
+	defer span.Finish()
+
 	errorCodeStr := "-1"
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
 		metrics.RequestDuration.WithLabelValues(s.config.ServiceLabel, constants.Signup, errorCodeStr).Observe(v)
@@ -114,7 +136,7 @@ func (s *Server) Signup(ctx context.Context, req *pb.SignupReq) (*pb.SignupRes, 
 		timer.ObserveDuration()
 	}()
 	// user does not exist, insert into database
-	_, err := s.handler.CreateNewUser(req.Username, req.Password)
+	_, err := s.handler.CreateNewUser(ctx, req.Username, req.Password)
 	if err != nil {
 		v, ok := err.(*customErr.Error)
 		if !ok {
@@ -137,6 +159,11 @@ func (s *Server) Signup(ctx context.Context, req *pb.SignupReq) (*pb.SignupRes, 
 
 // Login is the implementation of the grpc server service, as defined in service.proto
 func (s *Server) Login(ctx context.Context, req *pb.LoginReq) (*pb.LoginRes, error) {
+	// start tracing span from context
+	span, ctx := ot.StartSpanFromContext(ctx, grpcLogin)
+	s.addSpanTags(span)
+	defer span.Finish()
+
 	errorCodeStr := "-1"
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
 		metrics.RequestDuration.WithLabelValues(s.config.ServiceLabel, constants.Login, errorCodeStr).Observe(v)
@@ -150,7 +177,7 @@ func (s *Server) Login(ctx context.Context, req *pb.LoginReq) (*pb.LoginRes, err
 	var userID int64
 
 	// check if a user with the given username exists
-	userID, err := s.handler.VerifyLogin(req.Username, req.Password)
+	userID, err := s.handler.VerifyLogin(ctx, req.Username, req.Password)
 	if err != nil {
 		v, ok := err.(*customErr.Error)
 		if !ok {
@@ -170,4 +197,9 @@ func (s *Server) Login(ctx context.Context, req *pb.LoginReq) (*pb.LoginRes, err
 		ErrorCode: -1,
 		UserID:    userID,
 	}, nil
+}
+
+func (s *Server) addSpanTags(span ot.Span) {
+	span.SetTag(tracing.SpanKind, tracing.SpanKindServer)
+	span.SetTag(tracing.Component, tracing.ComponentServer)
 }

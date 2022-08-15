@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	config "itemService/config"
@@ -27,9 +28,9 @@ type Handler struct {
 }
 
 // AddItemToUserFavList is called by the server when a request to the AddFav grpc service method is made
-func (h *Handler) AddItemToUserFavList(itemID int64, shopID int64, userID int64) (*pb.Item, error) {
+func (h *Handler) AddItemToUserFavList(ctx context.Context, itemID int64, shopID int64, userID int64) (*pb.Item, error) {
 	// check if item is already in user's favourite's list
-	_, query, err := h.retrieveFavFromDb(userID, itemID, shopID)
+	_, query, err := h.retrieveFavFromDb(ctx, userID, itemID, shopID)
 
 	if err != nil {
 		if err != sql.ErrNoRows {
@@ -62,13 +63,13 @@ func (h *Handler) AddItemToUserFavList(itemID int64, shopID int64, userID int64)
 	)
 
 	// checks the cache for the item, else makes an external api call to fetch the item information
-	item, err := h.getItem(itemID, shopID)
+	item, err := h.getItem(ctx, itemID, shopID)
 	if err != nil {
 		return nil, err
 	}
 
 	// add favourite into database
-	err = h.addFavIntoDb(userID, itemID, shopID)
+	err = h.addFavIntoDb(ctx, userID, itemID, shopID)
 	if err != nil {
 		return nil, err
 	}
@@ -77,8 +78,8 @@ func (h *Handler) AddItemToUserFavList(itemID int64, shopID int64, userID int64)
 }
 
 // GetUserFavourites is called by the server when a request to the GetFavList grpc service method is made
-func (h *Handler) GetUserFavourites(userID int64, page int32) ([]*pb.Item, int32, error) {
-	favourites, err := h.retrieveFavListFromDb(userID, int(page))
+func (h *Handler) GetUserFavourites(ctx context.Context, userID int64, page int32) ([]*pb.Item, int32, error) {
+	favourites, err := h.retrieveFavListFromDb(ctx, userID, int(page))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -96,7 +97,7 @@ func (h *Handler) GetUserFavourites(userID int64, page int32) ([]*pb.Item, int32
 		g.Go(
 			func() error {
 				// metrics.TotalGoRoutines.Inc()
-				item, err := h.getItem(fav.ItemID, fav.ShopID)
+				item, err := h.getItem(ctx, fav.ItemID, fav.ShopID)
 				items[i] = item
 				return err
 			})
@@ -109,7 +110,7 @@ func (h *Handler) GetUserFavourites(userID int64, page int32) ([]*pb.Item, int32
 	}
 
 	// get total pages
-	totalPages, err := h.getFavouritesCount(userID)
+	totalPages, err := h.getFavouritesCount(ctx, userID)
 	if err != nil {
 		return items, 0, err
 	}
@@ -118,16 +119,16 @@ func (h *Handler) GetUserFavourites(userID int64, page int32) ([]*pb.Item, int32
 }
 
 // DeleteFavourite is called by the server when a request to the DeleteFav grpc service method is made
-func (h *Handler) DeleteFavourite(userID int64, itemID int64, shopID int64) error {
-	return h.removeFavFromDb(userID, itemID, shopID)
+func (h *Handler) DeleteFavourite(ctx context.Context, userID int64, itemID int64, shopID int64) error {
+	return h.removeFavFromDb(ctx, userID, itemID, shopID)
 }
 
 // getItem is a helper function to retrieve an item's information.
 // It first checks if the item is in the cache, and returns it if true.
 // Else, it makes an external HTTP call to fetch the item information.
-func (h *Handler) getItem(itemID int64, shopID int64) (*pb.Item, error) {
+func (h *Handler) getItem(ctx context.Context, itemID int64, shopID int64) (*pb.Item, error) {
 	// check if item is in cache
-	item, err := h.retrieveItemFromRedis(itemID, shopID)
+	item, err := h.retrieveItemFromRedis(ctx, itemID, shopID)
 
 	if err != nil {
 		// error occured with redis
@@ -137,7 +138,7 @@ func (h *Handler) getItem(itemID int64, shopID int64) (*pb.Item, error) {
 	// item is not yet in cache, fetch item from external API
 	if item == nil {
 		// item not in cache, fetch item information from external api
-		externalRes, err := h.fetchItemInfoFromExternal(itemID, shopID)
+		externalRes, err := h.fetchItemInfoFromExternal(ctx, itemID, shopID)
 		if err != nil {
 			return nil, err
 		}
@@ -150,7 +151,7 @@ func (h *Handler) getItem(itemID int64, shopID int64) (*pb.Item, error) {
 		}
 
 		// save item in cache
-		err = h.addItemToRedis(itemID, shopID, item)
+		err = h.addItemToRedis(ctx, itemID, shopID, item)
 		if err != nil {
 			return item, err
 		}
@@ -161,10 +162,10 @@ func (h *Handler) getItem(itemID int64, shopID int64) (*pb.Item, error) {
 
 // retrieveItemFromRedis is a helper function to retrieve an item's information from redis.
 // An item is identified by its itemID and shopID
-func (h *Handler) retrieveItemFromRedis(itemID int64, shopID int64) (*pb.Item, error) {
+func (h *Handler) retrieveItemFromRedis(ctx context.Context, itemID int64, shopID int64) (*pb.Item, error) {
 	var item pb.Item
 
-	bytes, err := h.redisManager.Get(util.FormatRedisKeyForItem(itemID, shopID))
+	bytes, err := h.redisManager.Get(ctx, util.FormatRedisKeyForItem(itemID, shopID))
 	// unexpected error occured with redis op
 	if err != nil {
 		return nil, err
@@ -190,8 +191,7 @@ func (h *Handler) retrieveItemFromRedis(itemID int64, shopID int64) (*pb.Item, e
 	)
 
 	if item.ItemID == 0 || item.ShopID == 0 || item.Price == 0 || item.Name == "" {
-		// item is not in redis or incomplete
-		h.logger.Info("item is not in redis")
+		// item is not in redis or has incomplete information
 		return nil, nil
 	}
 
@@ -199,7 +199,7 @@ func (h *Handler) retrieveItemFromRedis(itemID int64, shopID int64) (*pb.Item, e
 }
 
 // addItemToRedis is a helper function to add an item to redis.
-func (h *Handler) addItemToRedis(itemID int64, shopID int64, item *pb.Item) error {
+func (h *Handler) addItemToRedis(ctx context.Context, itemID int64, shopID int64, item *pb.Item) error {
 	// marshal into bytes to store in redis
 	bytes, err := util.MarshalProto(item)
 	if err != nil {
@@ -216,7 +216,7 @@ func (h *Handler) addItemToRedis(itemID int64, shopID int64, item *pb.Item) erro
 
 	expire := time.Duration(h.config.RedisConfig.Expire) * time.Second
 
-	err = h.redisManager.Set(util.FormatRedisKeyForItem(itemID, shopID), bytes, expire)
+	err = h.redisManager.Set(ctx, util.FormatRedisKeyForItem(itemID, shopID), bytes, expire)
 	if err != nil {
 		h.logger.Error(
 			constants.ErrorRedisSetMsg,
@@ -234,16 +234,16 @@ func (h *Handler) addItemToRedis(itemID int64, shopID int64, item *pb.Item) erro
 // retrieveFavFromDb is a helper function called to perform a query on the database for a user's favourited item.
 // It returns the user's favourited item as well as the used query and error.
 // If the user does not have the item under their favourites, retrieveFavFromDb returns nil.
-func (h *Handler) retrieveFavFromDb(userID int64, itemID int64, shopID int64) (*db.Favourite, string, error) {
+func (h *Handler) retrieveFavFromDb(ctx context.Context, userID int64, itemID int64, shopID int64) (*db.Favourite, string, error) {
 	var fav db.Favourite
 	query := fmt.Sprintf("SELECT * FROM Favourites WHERE userID='%d' AND itemID='%d' AND shopID='%d'", userID, itemID, shopID)
-	err := h.dbManager.QueryOne(query, constants.GetFavList, &fav.ID, &fav.UserID, &fav.ItemID, &fav.ShopID, &fav.TimeAdded)
+	err := h.dbManager.QueryOne(ctx, query, constants.GetFavList, &fav.ID, &fav.UserID, &fav.ItemID, &fav.ShopID, &fav.TimeAdded)
 	return &fav, query, err
 }
 
-func (h *Handler) addFavIntoDb(userID int64, itemID int64, shopID int64) error {
+func (h *Handler) addFavIntoDb(ctx context.Context, userID int64, itemID int64, shopID int64) error {
 	query := fmt.Sprintf("INSERT INTO Favourites(userID, itemID, shopID) VALUES('%d','%d','%d')", userID, itemID, shopID)
-	id, err := h.dbManager.InsertRow(query, constants.AddFav)
+	id, err := h.dbManager.InsertRow(ctx, query, constants.AddFav)
 	if err != nil {
 		// error occured when inserting user into database
 		return &customErr.Error{constants.ErrorDatabaseInsert, constants.ErrorDatabaseInsertMsg, err}
@@ -260,10 +260,10 @@ func (h *Handler) addFavIntoDb(userID int64, itemID int64, shopID int64) error {
 }
 
 // removeFavFromDb is a helper function to delete a user's favourite from the database.
-func (h *Handler) removeFavFromDb(userID int64, itemID int64, shopID int64) error {
+func (h *Handler) removeFavFromDb(ctx context.Context, userID int64, itemID int64, shopID int64) error {
 	query := fmt.Sprintf("DELETE FROM Favourites WHERE userID='%d' and itemid='%d' and shopID='%d'", userID, itemID, shopID)
 
-	rowsDeleted, err := h.dbManager.DeleteOne(query, constants.DeleteFav)
+	rowsDeleted, err := h.dbManager.DeleteOne(ctx, query, constants.DeleteFav)
 
 	// unexpected error occured or no rows deleted
 	if err != nil || rowsDeleted != 1 {
@@ -280,8 +280,8 @@ func (h *Handler) removeFavFromDb(userID int64, itemID int64, shopID int64) erro
 // fetchItemInfoFromExternal is a helper function for making external HTTP calls to fetch the item's information.
 // If the call is successful, the item is returned.
 // Else, nil is returned alongside an error.
-func (h *Handler) fetchItemInfoFromExternal(itemID int64, shopID int64) (*pb.Item, error) {
-	res, err := shopee.FetchItemPrice(&h.config.ExternalConfig.Shopee, h.logger, itemID, shopID)
+func (h *Handler) fetchItemInfoFromExternal(ctx context.Context, itemID int64, shopID int64) (*pb.Item, error) {
+	res, err := shopee.FetchItemPrice(ctx, &h.config.ExternalConfig.Shopee, h.logger, itemID, shopID)
 
 	if err != nil {
 		// external api call error
@@ -309,11 +309,11 @@ func (h *Handler) fetchItemInfoFromExternal(itemID int64, shopID int64) (*pb.Ite
 
 // retrieveFavListFromDb is a helper function to retrieve all of a user's, identified by their userID, favourites.
 // It returns a list of db.Favourite
-func (h *Handler) retrieveFavListFromDb(userID int64, page int) ([]db.Favourite, error) {
+func (h *Handler) retrieveFavListFromDb(ctx context.Context, userID int64, page int) ([]db.Favourite, error) {
 	query := fmt.Sprintf("SELECT * FROM Favourites WHERE userID='%d' ORDER BY timeAdded desc LIMIT %d OFFSET %d", userID, h.config.MaxPerPage, h.config.MaxPerPage*page)
 
 	// query rows
-	rows, err := h.dbManager.QueryRows(query, constants.GetFavList)
+	rows, err := h.dbManager.QueryRows(ctx, query, constants.GetFavList)
 	if err != nil {
 		// error occured when querying
 		h.logger.Error(
@@ -361,11 +361,10 @@ func (h *Handler) retrieveFavListFromDb(userID int64, page int) ([]db.Favourite,
 }
 
 // getFavouritesCount is a helper function used to count the total number of favourited items a user has.
-func (h *Handler) getFavouritesCount(userID int64) (int32, error) {
+func (h *Handler) getFavouritesCount(ctx context.Context, userID int64) (int32, error) {
 	query := fmt.Sprintf("SELECT count(*) FROM Favourites WHERE userID='%d'", userID)
 	var count int
-	// err := h.dbManager.QueryOne(query).Scan(&count)
-	err := h.dbManager.QueryOne(query, constants.GetFavCount, &count)
+	err := h.dbManager.QueryOne(ctx, query, constants.GetFavCount, &count)
 	if err != nil {
 		return 0, &customErr.Error{constants.ErrorDatabaseQuery, constants.ErrorDatabaseQueryMsg, err}
 	}

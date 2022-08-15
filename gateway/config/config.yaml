@@ -2,9 +2,9 @@ hostname: localhost
 port: 5000
 ginMode: debug
 trustedProxies:
-  - http://localhost:80
+  - http://docker.for.mac.host.internal:80
 allowedOrigins:
-  - http://localhost:80
+  - http://docker.for.mac.host.internal:80
 
 # config for incoming requests
 http:
@@ -21,6 +21,7 @@ http:
       login:
         endpoint: /login
         method: post
+    
   itemService:
     label: itemservice
     host: localhost
@@ -37,15 +38,15 @@ http:
         endpoint: /get/list
         method: get
 
-# config for routing requests to the different services
+# config for gateway as a grpc client to the respective microservices
 grpc:
   userService:
-    label: userservice
+    label: gateway-userservice-client
     # host: localhost
     host: userservice
     port: 6000
   itemService:
-    label: itemservice
+    label: gateway-itemservice-client
     # host: localhost
     host: itemservice
     port: 7000
@@ -56,6 +57,6 @@ prometheus:
   endpoint: /metrics
 
 jaeger:
-  host: localhost:6831
+  host: docker.for.mac.host.internal:6831
   serviceName: gateway
   logSpans: true

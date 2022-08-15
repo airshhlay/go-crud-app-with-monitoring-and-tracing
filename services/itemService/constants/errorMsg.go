@@ -11,6 +11,8 @@ const (
 	ErrorPromHTTPServerMsg = "error_prom_http_sever"
 	// ErrorPromInitCustomMetricsMsg server error message
 	ErrorPromInitCustomMetricsMsg = "error_prom_init_custom_metrics"
+	// ErrorJaegerInitMsg service error message
+	ErrorJaegerInitMsg = "error_jaeger_init"
 
 	// database
 
