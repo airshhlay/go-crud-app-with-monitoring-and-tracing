@@ -20,8 +20,7 @@ import (
 )
 
 const (
-	fetchItemPrice = "shopee.FetchItemPrice"
-	component      = "itemService.external"
+	fetchItemPrice = "external.FetchItemPrice"
 )
 
 // FetchItemPrice makes a call to the Shopee API to fetch an item's information, including its name, price, image, rating etc.
@@ -32,7 +31,7 @@ func FetchItemPrice(ctx context.Context, config *config.Shopee, logger *zap.Logg
 	span, _ := ot.StartSpanFromContext(ctx, fetchItemPrice)
 	// add span tags
 	span.SetTag(tracing.SpanKind, tracing.SpanKindClient)
-	span.SetTag(tracing.Component, tracing.ComponentExternal)
+	span.SetTag(tracing.Component, tracing.ComponentHTTP)
 	defer span.Finish()
 	// time the request
 	successStr := constants.True // for the metric label "success"

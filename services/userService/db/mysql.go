@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	mysqlInsertRow = "mysql.InsertRow"
-	mysqlQueryOne  = "mysql.QueryOne"
+	mysqlInsertRow = "db.InsertRow"
+	mysqlQueryOne  = "db.QueryOne"
 )
 
 // DatabaseManager is a struct containing a reference to the database connection, logger, and the database config
@@ -156,5 +156,5 @@ func (dm *DatabaseManager) addSpanTags(span ot.Span, statement string) {
 	span.SetTag(tracing.DatabaseInstance, dm.config.DbName)
 	span.SetTag(tracing.DatabaseUser, dm.config.User)
 	span.SetTag(tracing.DatabaseStatement, statement)
-	span.SetTag(tracing.Component, tracing.ComponentDB)
+	span.SetTag(tracing.Component, tracing.ComponentMySQL)
 }
