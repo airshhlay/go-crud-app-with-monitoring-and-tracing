@@ -12,7 +12,7 @@ export default function Signup(props) {
       return setErrorMessage("Username and/or password can not be blank.")
     }
     if (username.length > 15 || username.length < 3) {
-      return setErrorMessage("Username must be 3 to 15s characters long!")
+      return setErrorMessage("Username must be 3 to 15 characters long!")
     } else if (password.length < 8 || password.length > 20) {
       return setErrorMessage("Password should be 8 to 20 characters long!")
     }
