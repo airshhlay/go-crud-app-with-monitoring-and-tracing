@@ -1,25 +1,48 @@
 package constants
 
 const (
-	INFO_SERVER_START_MSG = "info_server_start_success"
+	// server
+
+	// InfoConfigLoaded info for logging
+	InfoConfigLoaded = "info_config_loaded"
+	// InfoPromServerStart info for logging
+	InfoPromServerStart = "info_prom_sever_start"
+	// InfoHTTPServerStart info for logging
+	InfoHTTPServerStart = "info_http_server_start"
+	// InfoGRPCServerStart info for logging
+	InfoGRPCServerStart = "info_grpc_server_start"
 
 	// database
-	INFO_DATABASE_QUERY           = "info_db_query"
-	INFO_DATABASE_QUERY_ROWS      = "info_db_query_rows"
-	INFO_DATABASE_INSERT          = "info_db_insert"
-	INFO_DATABASE_CONNECT_SUCCESS = "info_db_connect_success"
-	INFO_DATABASE_DELETE          = "info_db_delete"
 
-	INFO_REDIS_CONNECT_SUCCESS = "info_redis_connect_success"
-	INFO_REDIS_SET             = "info_redis_set"
-	INFO_REDIS_GET             = "info_redis_get"
-	INFO_REDIS_NOT_FOUND       = "info_redis_item_not_found"
+	// InfoDatabaseQuery info for logging
+	InfoDatabaseQuery = "info_db_query"
+	// InfoDatabaseQueryRows info for logging
+	InfoDatabaseQueryRows = "info_db_query_rows"
+	// InfoDatabaseInsert info for logging
+	InfoDatabaseInsert = "info_db_insert"
+	// InfoDatabaseConnectSuccess info for logging
+	InfoDatabaseConnectSuccess = "info_db_connect_success"
+	// InfoDatabaseDelete info for logging
+	InfoDatabaseDelete = "info_db_delete"
 
-	INFO_EXTERNAL_API_CALL = "info_External_api_call"
+	// InfoRedisConnectSuccess info for logging
+	InfoRedisConnectSuccess = "info_redis_connect_success"
+	// InfoRedisSet info for logging
+	InfoRedisSet = "info_redis_set"
+	// InfoRedisGet info for logging
+	InfoRedisGet = "info_redis_get"
+	// InfoRedisNotFound info for logging
+	InfoRedisNotFound = "info_redis_item_not_found"
+
+	// InfoExternalAPICall info for logging
+	InfoExternalAPICall = "info_External_api_call"
 
 	// queries
-	INFO_ITEM_NOT_IN_FAVOURITES = "info_item_not_in_favourites"
-	INFO_ITEM_IN_FAVOURITES     = "info_item_in_favourites"
 
-	INFO_PROM_SERVER_START_MSG = "info_prom_sever_start"
+	// InfoFavouriteAdded info for logging
+	InfoFavouriteAdded = "info_favourite_added"
+	// InfoItemNotInFavourites info for logging
+	InfoItemNotInFavourites = "info_item_not_in_favourites"
+	// InfoItemInFavourites info for logging
+	InfoItemInFavourites = "info_item_in_favourites"
 )

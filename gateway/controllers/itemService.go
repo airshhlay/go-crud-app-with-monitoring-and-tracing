@@ -3,7 +3,9 @@ package controllers
 import (
 	client "gateway/client"
 	"gateway/config"
+	"gateway/constants"
 	req "gateway/dto/request"
+	res "gateway/dto/response"
 	metrics "gateway/metrics"
 	proto "gateway/proto"
 	"strconv"
@@ -14,19 +16,14 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	userIdStr = "userId"
-	itemIdStr = "itemId"
-	shopIdStr = "shopId"
-	pageStr   = "page"
-)
-
+// ItemServiceController is called to handle incoming HTTP requests directed to the item service.
 type ItemServiceController struct {
 	config *config.ItemServiceConfig
 	logger *zap.Logger
 	client *client.ItemServiceClient
 }
 
+// NewItemServiceController returns an ItemServiceController.
 func NewItemServiceController(config *config.ItemServiceConfig, logger *zap.Logger, client *client.ItemServiceClient) *ItemServiceController {
 	return &ItemServiceController{
 		config,
@@ -35,6 +32,7 @@ func NewItemServiceController(config *config.ItemServiceConfig, logger *zap.Logg
 	}
 }
 
+// AddFavHandler handles requests to the /item/add/fav endpoint
 func (i *ItemServiceController) AddFavHandler(c *gin.Context) {
 	var errorCodeStr string
 	var errorCodeInt int
@@ -56,85 +54,74 @@ func (i *ItemServiceController) AddFavHandler(c *gin.Context) {
 		responseSize.Observe(float64(c.Writer.Size()))
 	}()
 
-	userId := i.getUserId(c)
-	if userId == 0 {
-		errorCodeInt = 400
-		c.JSON(200, gin.H{
-			"errorCode": 400,
-			"errorMsg":  "invalid_user",
-		})
+	userID := i.getUserID(c)
+	if userID == 0 {
+		errorCodeInt = constants.ErrorGetUserIDFromToken
 		return
 	}
 
 	var addFavReq req.AddFavReq
 	err := c.BindJSON(&addFavReq)
 	if err != nil {
-		i.logger.Error(
-			"error_request_binding",
+		i.logger.Info(
+			constants.ErrorInvalidRequestMsg,
 			zap.Error(err),
 		)
-		errorCodeInt = 400
-		c.JSON(200, gin.H{
-			"errorCode": 400,
-			"errorMsg":  "invalid_request",
-		})
+		errorCodeInt = constants.ErrorInvalidRequest
+		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ErrorInvalidRequest})
 		return
 	}
 	i.logger.Info(
-		"info_request",
-		zap.Any("request", addFavReq),
+		constants.InfoItemServiceRequest,
+		zap.Any(constants.Request, addFavReq),
 	)
 
-	itemId, err := strconv.ParseInt(addFavReq.ItemId, 10, 64)
+	itemID, err := strconv.ParseInt(addFavReq.ItemID, 10, 64)
 	if err != nil {
 		i.logger.Error(
-			"error_type_conversion",
-			zap.String("itemId", addFavReq.ItemId),
+			constants.ErrorParseIntMsg,
+			zap.String(constants.ItemID, addFavReq.ItemID),
 			zap.Error(err),
 		)
-		errorCodeInt = 400
-		c.JSON(200, gin.H{
-			"errorCode": 400,
-			"errorMsg":  "invalid_request",
-		})
+		errorCodeInt = constants.ErrorParseInt
+		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ErrorParseInt})
 		return
 	}
 
-	shopId, err := strconv.ParseInt(addFavReq.ShopId, 10, 64)
+	shopID, err := strconv.ParseInt(addFavReq.ShopID, 10, 64)
 	if err != nil {
 		i.logger.Error(
-			"error_type_conversion",
-			zap.String("shopId", addFavReq.ShopId),
+			constants.ErrorParseIntMsg,
+			zap.String(constants.ShopID, addFavReq.ShopID),
 			zap.Error(err),
 		)
-		errorCodeInt = 400
-		c.JSON(200, gin.H{
-			"errorCode": 400,
-			"errorMsg":  "invalid_request",
-		})
+		errorCodeInt = constants.ErrorParseInt
+		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ErrorParseInt})
 		return
 	}
 
+	// construct the request to be made as a grpc client to item service
 	clientAddFavReq := &proto.AddFavReq{
-		UserId: userId,
-		// UserId: 1,
-		ItemId: itemId,
-		ShopId: shopId,
+		UserID: userID,
+		ItemID: itemID,
+		ShopID: shopID,
 	}
 
+	// call item service
 	clientAddFavRes, err := i.client.AddFav(c, clientAddFavReq)
 	if err != nil {
-		errorCodeInt = 500
-		c.JSON(500, "server_error")
+		errorCodeInt = constants.ErrorItemserviceConnection
+		c.JSON(500, res.GatewayResponse{ErrorCode: constants.ErrorItemserviceConnection})
 		return
 	}
 	errorCodeInt = int(clientAddFavRes.ErrorCode)
 
-	// errorCode, if any
+	// convert error code to string for metrics label
 	errorCodeStr = strconv.Itoa(errorCodeInt)
 	c.IndentedJSON(200, clientAddFavRes)
 }
 
+// DeleteFavHandler handles requests to the /item/delete/fav endpoint
 func (i *ItemServiceController) DeleteFavHandler(c *gin.Context) {
 	var errorCodeStr string
 	var errorCodeInt int
@@ -147,60 +134,62 @@ func (i *ItemServiceController) DeleteFavHandler(c *gin.Context) {
 		timer.ObserveDuration()
 	}()
 
-	userId := i.getUserId(c)
-	if userId == 0 {
-		errorCodeInt = 400
-		c.JSON(200, gin.H{
-			"errorCode": 400,
-			"errorMsg":  "invalid_user",
-		})
+	userID := i.getUserID(c)
+	if userID == 0 {
+		errorCodeInt = constants.ErrorGetUserIDFromToken
 		return
 	}
 
 	// retrieve query params
-	itemId, err := strconv.ParseInt(c.Query(itemIdStr), 10, 64)
+	itemID, err := strconv.ParseInt(c.Query(constants.ItemID), 10, 64)
 	if err != nil {
-		i.logger.Error("error_query_params", zap.Error(err))
-		errorCodeInt = 400
-		c.JSON(200, gin.H{
-			"errorCode": 400,
-			"errorMsg":  "invalid_request",
-		})
+		i.logger.Error(
+			constants.ErrorParseIntMsg,
+			zap.String(constants.ItemID, c.Query(constants.ItemID)),
+			zap.Error(err),
+		)
+		errorCodeInt = constants.ErrorParseInt
+		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ErrorParseInt})
 		return
 	}
-	shopId, err := strconv.ParseInt(c.Query(shopIdStr), 10, 64)
+	shopID, err := strconv.ParseInt(c.Query(constants.ShopID), 10, 64)
 	if err != nil {
-		errorCodeInt = 400
-		c.JSON(200, gin.H{
-			"errorCode": 400,
-			"errorMsg":  "invalid_request",
-		})
+		i.logger.Error(
+			constants.ErrorParseIntMsg,
+			zap.String(constants.ShopID, c.Query(constants.ShopID)),
+			zap.Error(err),
+		)
+		errorCodeInt = constants.ErrorParseInt
+		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ErrorParseInt})
 		return
 	}
 
+	// construct the request to be made as a grpc client to item service
 	clientDeleteFavReq := &proto.DeleteFavReq{
-		UserId: userId,
-		// UserId: 1,
-		ItemId: itemId,
-		ShopId: shopId,
+		UserID: userID,
+		ItemID: itemID,
+		ShopID: shopID,
 	}
+	// call item service
 	clientDeleteFavRes, err := i.client.DeleteFav(c, clientDeleteFavReq)
 	if err != nil {
-		errorCodeInt = 500
-		c.JSON(500, "server_error")
+		errorCodeInt = constants.ErrorItemserviceConnection
+		c.JSON(500, res.GatewayResponse{ErrorCode: constants.ErrorItemserviceConnection})
 		return
 	}
+
 	errorCodeInt = int(clientDeleteFavRes.ErrorCode)
-	// errorCode, if any
+	// convert error code to string for metrics
 	errorCodeStr = strconv.Itoa(errorCodeInt)
 	c.IndentedJSON(200, clientDeleteFavRes)
 }
 
+// GetFavListHandler handles requests to the /item/get/list endpoint
 func (i *ItemServiceController) GetFavListHandler(c *gin.Context) {
 	var errorCodeStr string
 	var errorCodeInt int
 
-	// observer request latency
+	// observe request latency
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
 		metrics.RequestLatency.WithLabelValues(i.config.Label, c.Request.URL.Path, errorCodeStr).Observe(v)
 	}))
@@ -216,73 +205,63 @@ func (i *ItemServiceController) GetFavListHandler(c *gin.Context) {
 		responseSize.Observe(float64(c.Writer.Size()))
 	}()
 
-	userId := i.getUserId(c)
-	if userId == 0 {
-		errorCodeInt = 400
-		c.JSON(200, gin.H{
-			"errorCode": 400,
-			"errorMsg":  "invalid_user",
-		})
+	userID := i.getUserID(c)
+	if userID == 0 {
+		errorCodeInt = constants.ErrorGetUserIDFromToken
 		return
 	}
 
 	// retrieve query params
-	page, err := strconv.Atoi(c.Query(pageStr))
+	page, err := strconv.Atoi(c.Query(constants.Page))
 	if err != nil {
-		i.logger.Error("error_query_params", zap.Error(err))
-		errorCodeInt = 400
-		c.JSON(200, gin.H{
-			"errorCode": 400,
-			"errorMsg":  "invalid_request",
-		})
+		i.logger.Error(
+			constants.ErrorParseIntMsg,
+			zap.String(constants.Page, c.Query(constants.Page)),
+			zap.Error(err),
+		)
+		errorCodeInt = constants.ErrorParseInt
+		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ErrorParseInt})
+		return
 	}
 
 	if page < 0 {
-		errorCodeInt = 400
-		c.JSON(200, gin.H{
-			"errorCode": 400,
-			"errorMsg":  "invalid_request",
-		})
+		errorCodeInt = constants.ErrorInvalidRequest
+		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ErrorInvalidRequest})
 		return
 	}
 
+	// construct the request to be made as a grpc client to item service
 	clientGetFavListReq := &proto.GetFavListReq{
-		UserId: userId,
-		// UserId: 1,
-		Page: int32(page),
+		UserID: userID,
+		Page:   int32(page),
 	}
+	// call item service
 	clientGetFavListRes, err := i.client.GetFavList(c, clientGetFavListReq)
 	if err != nil {
-		errorCodeInt = 500
-		c.JSON(500, "server_error")
+		errorCodeInt = constants.ErrorItemserviceConnection
+		c.JSON(500, res.GatewayResponse{ErrorCode: constants.ErrorItemserviceConnection})
 		return
 	}
 	errorCodeInt = int(clientGetFavListRes.ErrorCode)
-	// errorCode, if any
 	errorCodeStr = strconv.Itoa(errorCodeInt)
 	c.IndentedJSON(200, clientGetFavListRes)
 }
 
-func (i *ItemServiceController) Ping(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "pong"})
-}
-
-func (i *ItemServiceController) getUserId(c *gin.Context) int64 {
-	userIdRaw, exists := c.Get(userIdStr)
+// getUserID is a helper function to retrieve the userID set by the auth middleware from the context.
+func (i *ItemServiceController) getUserID(c *gin.Context) int64 {
+	userIDRaw, exists := c.Get(constants.UserID)
 
 	if !exists {
-		i.logger.Error("error_no_user_id")
-		c.JSON(200, gin.H{
-			"errorCode": 400,
-			"errorMsg":  "invalid_login_request",
-		})
+		i.logger.Error(constants.ErrorNoUserIDInTokenMsg)
+		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ErrorNoUserIDInToken})
 		return 0
 	}
 
-	userId, err := strconv.ParseInt(userIdRaw.(string), 10, 64)
+	userID, err := strconv.ParseInt(userIDRaw.(string), 10, 64)
 	if err != nil {
-		i.logger.Error("error_parse_int", zap.Error(err))
+		i.logger.Error(constants.ErrorParseIntMsg, zap.Error(err))
+		c.JSON(200, res.GatewayResponse{ErrorCode: constants.ErrorGetUserIDFromToken})
 		return 0
 	}
-	return userId
+	return userID
 }

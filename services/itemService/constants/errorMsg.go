@@ -1,20 +1,52 @@
 package constants
 
 const (
-	ERROR_DATABASE_MSG            = "error_database_operation"
-	ERROR_DATABASE_INSERT_MSG     = "error_database_insert"
-	ERROR_DATABASE_QUERY_MSG      = "error_database_query"
-	ERROR_DATABASE_DELETE_MSG     = "error_database_delete"
-	ERROR_DATABASE_CONNECTION_MSG = "error_database_connection"
-	ERROR_REDIS_CONNECTION_MSG    = "error_redis_connection"
-	ERROR_REDIS_GET_MSG           = "error_redis_get"
-	ERROR_REDIS_SET_MSG           = "error_redis_set"
-	ERROR_SERVER_START_FAIL_MSG   = "error_server_start_fail"
-	ERROR_EXTERNAL_API_CALL_MSG   = "error_external_api_call"
-	ERROR_SHOPEE_API_CALL_MSG     = "error_external_shopee_api_call"
-	ERROR_MARSHAL_MSG             = "error_marshal"
-	ERROR_UNMARSHAL_MSG           = "error_unmarshal"
-	ERROR_TYPECAST_MSG            = "error_typecast"
-	ErrorPromHTTPServerMsg        = "error_prom_http_sever"
+	// server error
+
+	// ErrorLoadConfigFailMsg server error message
+	ErrorLoadConfigFailMsg = "error_load_config_fail"
+	// ErrorServerStartFailMsg server error message
+	ErrorServerStartFailMsg = "error_server_start_fail"
+	// ErrorPromHTTPServerMsg server error message
+	ErrorPromHTTPServerMsg = "error_prom_http_sever"
+	// ErrorPromInitCustomMetricsMsg server error message
 	ErrorPromInitCustomMetricsMsg = "error_prom_init_custom_metrics"
+
+	// database
+
+	// ErrorDatabaseMsg server error message
+	ErrorDatabaseMsg = "error_database_operation"
+	// ErrorDatabaseInsertMsg server error message
+	ErrorDatabaseInsertMsg = "error_database_insert"
+	// ErrorDatabaseQueryMsg server error message
+	ErrorDatabaseQueryMsg = "error_database_query"
+	// ErrorDatabaseDeleteMsg server error message
+	ErrorDatabaseDeleteMsg = "error_database_delete"
+	// ErrorDatabaseConnectionMsg server error message
+	ErrorDatabaseConnectionMsg = "error_database_connection"
+	// ErrorRedisConnectionMsg server error message
+	ErrorRedisConnectionMsg = "error_redis_connection"
+	// ErrorRedisGetMsg server error message
+	ErrorRedisGetMsg = "error_redis_get"
+	// ErrorRedisSetMsg server error message
+	ErrorRedisSetMsg = "error_redis_set"
+
+	// external calls
+
+	// ErrorExternalAPICallMsg server error message
+	ErrorExternalAPICallMsg = "error_external_api_call"
+	// ErrorExternalShopeeAPICallMsg server error message
+	ErrorExternalShopeeAPICallMsg = "error_external_shopee_api_call"
+
+	// marshalling / unmarshalling
+
+	// ErrorMarshalMsg server error message
+	ErrorMarshalMsg = "error_marshal"
+	// ErrorUnmarshalMsg server error message
+	ErrorUnmarshalMsg = "error_unmarshal"
+
+	// typecasting
+
+	// ErrorTypecastMsg server error message
+	ErrorTypecastMsg = "error_typecast"
 )

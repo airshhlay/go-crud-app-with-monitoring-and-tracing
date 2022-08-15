@@ -10,9 +10,9 @@ service ItemService {
 }
 
 message DeleteFavReq {
-  int64 userId = 1;
-  int64 itemId = 2;
-  int64 shopId = 3;
+  int64 userID = 1;
+  int64 itemID = 2;
+  int64 shopID = 3;
 }
 
 message DeleteFavRes {
@@ -21,9 +21,9 @@ message DeleteFavRes {
 }
 
 message AddFavReq {
-  int64 userId = 1;
-  int64 itemId = 2;
-  int64 shopId = 3;
+  int64 userID = 1;
+  int64 itemID = 2;
+  int64 shopID = 3;
 }
 
 message AddFavRes {
@@ -35,12 +35,12 @@ message AddFavRes {
 message Item {
   string name = 1;
   int64 price = 2;
-  int64 shopId = 3;
-  int64 itemId = 4;
+  int64 shopID = 3;
+  int64 itemID = 4;
 }
 
 message GetFavListReq {
-  int64 userId = 1;
+  int64 userID = 1;
   int32 page = 2;
 }
 

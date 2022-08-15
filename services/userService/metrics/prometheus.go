@@ -6,15 +6,16 @@ import (
 )
 
 var (
-	// create standard server metrics
+	// GrpcMetrics collects standard server metrics on the grpc server.
 	GrpcMetrics *grpc_prometheus.ServerMetrics
-	// Create a metrics registry.
+	// Reg is a ServerRegistry.
 	Reg *prometheus.Registry
-	// Create a customized counter metric.
-	TotalRequests              *prometheus.CounterVec
-	RequestDuration            *prometheus.HistogramVec
-	DatabaseOpDuration         *prometheus.HistogramVec
-	PasswordEncryptionDuration *prometheus.HistogramVec
+	// TotalRequests counts total requests.
+	TotalRequests *prometheus.CounterVec
+	// RequestDuration tracks request duration.
+	RequestDuration *prometheus.HistogramVec
+	// DatabaseOpDuration tracks database op durations.
+	DatabaseOpDuration *prometheus.HistogramVec
 )
 
 func init() {
@@ -40,15 +41,6 @@ func init() {
 		[]string{"service_label", "query_type", "query_label", "success"},
 	)
 
-	PasswordEncryptionDuration = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "process_encryption_op_duration_seconds",
-			Help:    "Measures the duration taken to bcrypt a password",
-			Buckets: []float64{0.01, 0.02, 0.05, 0.1, 0.2, 2},
-		},
-		[]string{},
-	)
-
 	// register collectors
-	Reg.MustRegister(GrpcMetrics, RequestDuration, DatabaseOpDuration, PasswordEncryptionDuration)
+	Reg.MustRegister(GrpcMetrics, RequestDuration, DatabaseOpDuration)
 }

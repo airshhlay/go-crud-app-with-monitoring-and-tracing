@@ -2,6 +2,7 @@ package main
 
 import (
 	"itemService/config"
+	"itemService/constants"
 	"itemService/db"
 	"log"
 
@@ -12,7 +13,7 @@ import (
 
 func main() {
 	// set logger
-	logger, err := NewLogger()
+	logger, err := newLogger()
 	if err != nil {
 		log.Fatal(err)
 		panic(err)
@@ -21,14 +22,11 @@ func main() {
 	// read in config
 	config, err := config.LoadConfig(logger)
 	if err != nil {
-		logger.Fatal(
-			"Failed to load config",
-			zap.Error(err),
-		)
+		logger.Fatal(constants.ErrorLoadConfigFailMsg, zap.Error(err))
 		panic(err)
 	}
 
-	logger.Info("Loaded config")
+	logger.Info(constants.InfoConfigLoaded)
 
 	// connect to database, get database manager
 	dbManager, err := db.InitDatabase(&config.DbConfig, logger)
@@ -48,7 +46,7 @@ func main() {
 	server.StartServer(config, logger, dbManager, redisManager)
 }
 
-func NewLogger() (*zap.Logger, error) {
+func newLogger() (*zap.Logger, error) {
 	cfg := zap.NewProductionConfig()
 	cfg.OutputPaths = []string{
 		"./log/service.log", "stderr",

@@ -5,6 +5,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Config struct to hold main configuration from config.yaml
 type Config struct {
 	Hostname         string           `mapstructure:hostname`
 	Port             string           `mapstructure:port`
@@ -13,16 +14,19 @@ type Config struct {
 	PrometheusConfig PrometheusConfig `mapstructure:prometheus`
 }
 
+// DbConfig holds configurations for the database.
 type DbConfig struct {
-	Driver   string `mapstructure:driver`
-	Host     string `mapstructure:host`
-	Port     string `mapstructure:port`
-	User     string `mapstructure:user`
-	Net      string `mapstructure:net`
-	DbName   string `mapstructure:dbName`
-	Password string `mapstructure:password`
+	ServiceLabel string `mapstructure:"serviceLabel"`
+	Driver       string `mapstructure:driver`
+	Host         string `mapstructure:host`
+	Port         string `mapstructure:port`
+	User         string `mapstructure:user`
+	Net          string `mapstructure:net`
+	DbName       string `mapstructure:dbName`
+	Password     string `mapstructure:password`
 }
 
+// LoadConfig is called in main.go to load all config
 func LoadConfig(logger *zap.Logger) (*Config, error) {
 	// ex, error := os.Executable()
 	// if error != nil {

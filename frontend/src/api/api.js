@@ -24,11 +24,11 @@ const getItemList = (page) => {
     });
 };
 
-const submitItem = (itemId, shopId) => {
+const submitItem = (itemID, shopID) => {
   return axios
     .post(
       `${endpoint}${ADD_ITEM}`, 
-      { itemId, shopId },
+      { itemID, shopID },
       {withCredentials: true},
     )
     .then((res) => {
@@ -39,10 +39,10 @@ const submitItem = (itemId, shopId) => {
     });
 };
 
-const deleteItem = (itemId, shopId) => {
-  console.log(`deleting item ${itemId}${shopId}`)
+const deleteItem = (itemID, shopID) => {
+  console.log(`deleting item ${itemID}${shopID}`)
   return axios
-    .delete(`${endpoint}${DELETE_ITEM}`, {withCredentials: true, params: {itemId, shopId}})
+    .delete(`${endpoint}${DELETE_ITEM}`, {withCredentials: true, params: {itemID, shopID}})
     .then((res) => {
       return res.data;
     })

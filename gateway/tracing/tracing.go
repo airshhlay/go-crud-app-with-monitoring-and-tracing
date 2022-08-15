@@ -1,57 +1,38 @@
-// package tracing
+package tracing
 
-// import (
-// 	"context"
-// 	config "gateway/config"
-// 	"log"
+import (
+	config "gateway/config"
+	constants "gateway/constants"
+	"io"
 
-// 	"go.opentelemetry.io/otel"
-// 	"go.opentelemetry.io/otel/attribute"
-// 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
-// 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	opentracing "github.com/opentracing/opentracing-go"
+	jaeger "github.com/uber/jaeger-client-go"
+	jaegercfg "github.com/uber/jaeger-client-go/config"
+	jaegerlog "github.com/uber/jaeger-client-go/log"
+	"github.com/uber/jaeger-lib/metrics"
+	"go.uber.org/zap"
+)
 
-// 	"go.opentelemetry.io/otel/sdk/resource"
-// 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-// )
+// InitJaeger creates a new tracer.
+func InitJaeger(config *config.JaegerConfig, logger *zap.Logger) (opentracing.Tracer, io.Closer, error) {
+	jaegerCfgInstance := jaegercfg.Configuration{
+		ServiceName: config.ServiceName,
+		Sampler: &jaegercfg.SamplerConfig{
+			Type:  jaeger.SamplerTypeConst,
+			Param: 1,
+		},
+		Reporter: &jaegercfg.ReporterConfig{
+			LogSpans:           config.LogSpans,
+			LocalAgentHostPort: config.Host,
+		},
+	}
 
-// var (
-// 	// todo: remove hardcoding
-// 	CollectorURL = "localhost:5000/tracing"
-// 	ServiceName  = "gateway"
-// )
-
-// func InitTracer(config *config.Config) func(context.Context) error {
-
-// 	secureOption := otlptracegrpc.WithInsecure()
-
-// 	exporter, err := otlptrace.New(
-// 		context.Background(),
-// 		otlptracegrpc.NewClient(
-// 			secureOption,
-// 			otlptracegrpc.WithEndpoint(CollectorURL),
-// 		),
-// 	)
-
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	resources, err := resource.New(
-// 		context.Background(),
-// 		resource.WithAttributes(
-// 			attribute.String(ServiceName),
-// 			attribute.String("library.language", "go"),
-// 		),
-// 	)
-// 	if err != nil {
-// 		log.Printf("Could not set resources: ", err)
-// 	}
-
-// 	otel.SetTracerProvider(
-// 		sdktrace.NewTracerProvider(
-// 			sdktrace.WithSampler(sdktrace.AlwaysSample()),
-// 			sdktrace.WithBatcher(exporter),
-// 			sdktrace.WithResource(resources),
-// 		),
-// 	)
-// 	return exporter.Shutdown
-// }
+	tracer, closer, err := jaegerCfgInstance.NewTracer(
+		jaegercfg.Logger(jaegerlog.StdLogger),
+		jaegercfg.Metrics(metrics.NullFactory),
+	)
+	if err != nil {
+		logger.Fatal(constants.ErrorJaegerInitMsg, zap.Error(err))
+	}
+	return tracer, closer, err
+}

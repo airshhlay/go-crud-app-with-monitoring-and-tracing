@@ -4,6 +4,7 @@ serviceLabel: userservice
 # running mysql locally (comment out)
 db:
   driver: mysql
+  serviceLabel: userservice-mysql
   # host: userservice-db
   # host: localhost
   host: host.docker.internal

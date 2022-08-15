@@ -5,17 +5,20 @@ import (
 	"go.uber.org/zap"
 )
 
+// Config struct to hold main configuration from config.yaml
 type Config struct {
 	Hostname         string           `mapstructure:"hostname"`
 	Port             string           `mapstructure:"port"`
 	GinMode          string           `mapstructure:"ginMode"`
 	TrustedProxies   []string         `mapstructure:trustedProxies`
 	AllowedOrigins   []string         `mapstructure:allowedOrigins`
-	HttpConfig       HttpConfig       `mapstructure:"http"`
+	HTTPConfig       HTTPConfig       `mapstructure:"http"`
 	GrpcConfig       GrpcConfig       `mapstructure:"grpc"`
 	PrometheusConfig PrometheusConfig `mapstructure:"prometheus"`
+	JaegerConfig     JaegerConfig     `mapstructure:"jaeger"`
 }
 
+// LoadConfig is called in main.go to load all config
 func LoadConfig(logger *zap.Logger) (*Config, error) {
 	viper.AddConfigPath("/app/gateway/config")
 	viper.AddConfigPath("/app/config")
@@ -50,10 +53,10 @@ func LoadConfig(logger *zap.Logger) (*Config, error) {
 		return nil, err
 	}
 
-	err = viper.UnmarshalKey("http", &config.HttpConfig)
+	err = viper.UnmarshalKey("http", &config.HTTPConfig)
 	if err != nil {
 		logger.Fatal(
-			"Unable to unmarshal into HttpConfig struct",
+			"Unable to unmarshal into HTTPConfig struct",
 			zap.Error(err),
 		)
 		return nil, err

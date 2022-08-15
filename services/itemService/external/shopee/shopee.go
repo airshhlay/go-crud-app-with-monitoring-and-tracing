@@ -7,23 +7,40 @@ import (
 	config "itemService/config"
 	constants "itemService/constants"
 	errors "itemService/errors"
+	metrics "itemService/metrics"
 	"net/http"
+	"strconv"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 )
 
-func FetchItemPrice(config *config.Shopee, logger *zap.Logger, itemId int64, shopId int64) (*ShopeeGetItemRes, error) {
+// FetchItemPrice makes a call to the Shopee API to fetch an item's information, including its name, price, image, rating etc.
+// It takes in an itemID and a shopID
+func FetchItemPrice(config *config.Shopee, logger *zap.Logger, itemID int64, shopID int64) (*GetItemRes, error) {
+	// time the request
+	successStr := "true" // for the metric label "success"
+	errorCodeStr := "0"  // for the metric label "errorCode"
+	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
+		metrics.ExternalRequestDuration.WithLabelValues(config.GetItem.Endpoint, successStr, errorCodeStr).Observe(v)
+	}))
+	defer func() {
+		timer.ObserveDuration()
+	}()
+
 	// TODO: add custom error messages for io error, unmarshalling error etc
-	endpoint := fmt.Sprintf("%s?itemId=%d&shopId=%d", config.GetItem.Endpoint, itemId, shopId)
+	// make external api call
+	endpoint := fmt.Sprintf("%s?itemID=%d&shopID=%d", config.GetItem.Endpoint, itemID, shopID)
 	raw, err := http.Get(endpoint)
 	if err != nil {
 		// error occured when making get request
 		logger.Error(
-			constants.ERROR_EXTERNAL_API_CALL_MSG,
+			constants.ErrorExternalShopeeAPICallMsg,
 			zap.String("endpoint", endpoint),
 			zap.Error(err),
 		)
-		return nil, errors.Error{constants.ERROR_EXTERNAL_API_CALL, constants.ERROR_EXTERNAL_API_CALL_MSG, err}
+		successStr = "false"
+		return nil, errors.Error{constants.ErrorExternalShopeeAPICall, constants.ErrorExternalShopeeAPICallMsg, err}
 	}
 	defer raw.Body.Close()
 
@@ -31,28 +48,31 @@ func FetchItemPrice(config *config.Shopee, logger *zap.Logger, itemId int64, sho
 	if err != nil {
 		// io error occured
 		logger.Error(
-			constants.ERROR_EXTERNAL_API_CALL_MSG,
+			constants.ErrorExternalShopeeAPICallMsg,
 			zap.String("endpoint", endpoint),
 			zap.Error(err),
 		)
 		return nil, err
 	}
 
-	var res *ShopeeGetItemRes
+	var res *GetItemRes
 	err = json.Unmarshal(body, &res)
 	if err != nil {
 		// unmarshalling error occured
 		logger.Error(
-			constants.ERROR_EXTERNAL_API_CALL_MSG,
+			constants.ErrorExternalShopeeAPICallMsg,
 			zap.String("endpoint", endpoint),
 			zap.Error(err),
 		)
+		successStr = "false"
+		return nil, err
 	}
 
+	errorCodeStr = strconv.Itoa(res.Error)
 	logger.Info(
-		constants.INFO_EXTERNAL_API_CALL,
+		constants.InfoExternalAPICall,
 		zap.String("endpoint", endpoint),
 		zap.Any("res", res),
 	)
-	return res, err
+	return res, nil
 }

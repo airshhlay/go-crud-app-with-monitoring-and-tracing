@@ -7,13 +7,17 @@ import (
 )
 
 var (
-	TotalRequests        *prometheus.CounterVec
-	RequestLatency       *prometheus.HistogramVec
-	ResponseSize         *prometheus.HistogramVec
+	// TotalRequests counts the total number of request received.
+	TotalRequests *prometheus.CounterVec
+	// RequestLatency tracks the duration each request takes to complete.
+	RequestLatency *prometheus.HistogramVec
+	// ResponseSize tracks the size of each outgoing response at the gateway.
+	ResponseSize *prometheus.HistogramVec
+	// AuthenticateDuration tracks the time taken to authenticate a user each time a request is made to routes that use the auth middleware.
 	AuthenticateDuration *prometheus.HistogramVec
 )
 
-// prometheus handler for the /metrics endpoint
+// PrometheusHandler returns a prometheus handler for the /metrics endpoint
 func PrometheusHandler() gin.HandlerFunc {
 	h := promhttp.Handler()
 
@@ -22,6 +26,7 @@ func PrometheusHandler() gin.HandlerFunc {
 	}
 }
 
+// Init registers the metrics
 func Init() error {
 	// total requests
 	TotalRequests = prometheus.NewCounterVec(
@@ -55,6 +60,7 @@ func Init() error {
 	)
 	prometheus.MustRegister(ResponseSize)
 
+	// authenticate duration
 	AuthenticateDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "process_authenticate_duration_seconds",

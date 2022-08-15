@@ -2,10 +2,11 @@ package db
 
 import "time"
 
+// Favourite is struct that defines the way a user's favourite is stored in the database. It follows the schema in schema/mysql.sql
 type Favourite struct {
-	Id        int64
-	UserId    int64
-	ItemId    int64
-	ShopId    int64
+	ID        int64
+	UserID    int64
+	ItemID    int64
+	ShopID    int64
 	TimeAdded time.Time
 }

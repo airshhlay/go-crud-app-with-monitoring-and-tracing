@@ -26,5 +26,5 @@ message LoginReq {
 message LoginRes {
   int32 errorCode = 1;
   string errorMsg = 2;
-  int64 userId = 3;
+  int64 userID = 3;
 }
