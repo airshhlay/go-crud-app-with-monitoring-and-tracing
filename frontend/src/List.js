@@ -14,7 +14,7 @@ import {
 import { DeleteFilled, EditFilled, EnterOutlined } from "@ant-design/icons";
 import { getItemList, deleteItem, submitItem }
   from "./api/api";
-import { bignumber } from "mathjs"
+import { bignumber, compositionDependencies } from "mathjs"
 
 const { Option } = Select;
 export default function ItemList(props) {
@@ -23,9 +23,8 @@ export default function ItemList(props) {
   const [totalPages, setTotalPages] = React.useState(0)
   const [currentPage, setCurrentPage] = React.useState(1)
   // fetch user's favourite items upon page load
-  const [errorMessage, setErrorMessage] = React.useState("")
   React.useEffect(() => {
-    onRefresh();
+    onRefresh(currentPage);
   }, []);
 
   // shows a success message to user upon successful adding of item
@@ -46,18 +45,14 @@ export default function ItemList(props) {
   };
 
   // refreshes user's favourites list
-  const onRefresh = () => {
-    console.log(`totalPages: ${totalPages}`)
-    console.log(`current page: ${currentPage}`)
+  const onRefresh = (currentPage) => {
     getItemList(currentPage - 1)
       .then((res) => {
         if (res.errorCode && res.errorCode !== -1) {
           showFailureMsg("Error occured when fetching items")
-        } else if (!res.items || res.items.length === 0 || !res.totalPages) {
-          showFailureMsg("Nothing in favourites - submit something!")
-        } else {
-          setData(res.items)
-          setTotalPages(res.totalPages)
+        } else if (res.items && res.totalPages) {
+          setData(res.items ? res.items : [])
+          setTotalPages(res.totalPages ? res.totalPages : 0)
         }
       })
       .catch((err) => {
@@ -70,20 +65,37 @@ export default function ItemList(props) {
       });
   };
 
-  const onDelete = (tag, index) => {
-    deleteItem(tag, index)
+  const onDelete = (itemID, shopID) => {
+    deleteItem(itemID, shopID)
       .then((res) => {
         if (!res.errorCode) {
-          return setErrorMessage("Unexpected error occured. Please try again later!")
+          return showFailureMsg("Unexpected error occured. Please try again later!")
         }
         if (res.errorCode && res.errorCode !== -1) {
           switch (res.errorCode) {
             default:
-              return setErrorMessage("Unexpected error occured. Please try again later!")
+              return showFailureMsg("Unexpected error occured. Please try again later!")
           }
         }
-        // show success message TODO
-        onRefresh();
+        const dataLength = data.length
+        // remove the item from the current data being displayed
+        setData(
+          data.filter((item) => {
+            console.log(item)
+            return item.itemID !== itemID && item.shopID !== shopID
+          })
+        )
+        // if no more items to display on this page
+        if (dataLength === 1) {
+          if (currentPage > 1) {
+            const newPage = currentPage - 1
+            setCurrentPage(newPage)
+            onRefresh(newPage)
+          } else {
+            // current page is already 1
+            onRefresh(1)
+          }
+        }
       })
       .catch((err) => {
         if (err.response && err.response.status === 401) {
@@ -96,9 +108,10 @@ export default function ItemList(props) {
   };
 
   const onPageChange = (page) => {
-    // console.log(`current page: ${page}`)
-    setCurrentPage(page)
-    onRefresh()
+    if (page !== currentPage) {
+      setCurrentPage(page)
+      onRefresh(page)
+    }
   }
 
   const SHOPEE_LINK_REGEX = /^https:\/\/shopee\.sg\/[\S]+-i\.([0-9]+)\.([0-9]+)(\?[\S]+)?$/
@@ -106,7 +119,6 @@ export default function ItemList(props) {
   const onAddToFavourites = () => {
     var matches = SHOPEE_LINK_REGEX.exec(shopeeLink)
     if (!matches || !matches[1] || !matches[2]) {
-      console.log("Not shopee link format")
       showFailureMsg("Incorrect format!")
     } else {
       var itemID = matches[2]
@@ -124,7 +136,13 @@ export default function ItemList(props) {
             }
           }
           if (res.item) {
-            setData([res.item, ...data].slice(0, 5))
+            if (currentPage === 1) {
+              // only add in the item if the current page is the first page, since we display newest items first
+              setData([res.item, ...data].slice(0, 5))
+            }
+            showSuccessMsg("Successfully added!")
+          } else {
+            showFailureMsg("Something went wrong with fetching your item. Please try again!")
           }
         })
         .catch(err => {
@@ -144,10 +162,11 @@ export default function ItemList(props) {
       <Col>
         <Input placeholder="Submit Shopee link" onChange={(e) => setShopeeLink(e.target.value)}></Input>
         <Button onClick={onAddToFavourites}>Add to Favourites!</Button>
-        <Button onClick={onRefresh}>
+        <Button onClick={() => onRefresh(currentPage)}>
           Refresh
         </Button>
         <div style={{ overflowY: "auto", height: "100%" }}>
+          {!data || data.length === 0 && "It's empty here."}
           {data &&
             data.map((item) => {
               return (
@@ -169,10 +188,15 @@ export default function ItemList(props) {
                     </Col>
                   </Row>
                 </Card>
-              );
+              )
             })}
         </div>
-        <Pagination current={currentPage} onChange={onPageChange} pageSize={5} total={totalPages * 5} />;
+        <Pagination
+          current={currentPage}
+          onChange={onPageChange}
+          pageSize={5}
+          total={totalPages * 5}
+        />
       </Col>
     </Row>
   );
