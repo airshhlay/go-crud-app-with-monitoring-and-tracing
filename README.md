@@ -50,3 +50,5 @@ Development: 03 Aug 2022 - 15 Aug 2022
 ## Viewing the UI
 Jaeger UI: `localhost:16886`\
 Grafana UI: `localhost:3000`
+
+To import the Grafana dashboard, click on `Dashboards > Import` in Grafana and copy and paste the contents of `grafana-shopee-favourites.json` 
