@@ -29,9 +29,9 @@ import (
 )
 
 const (
-	addFav     = "itemservice.server.AddFav"
-	deleteFav  = "itemservice.server.DeleteFav"
-	getFavList = "itemservice.server.GetFavList"
+	addFav     = "server.AddFav"
+	deleteFav  = "server.DeleteFav"
+	getFavList = "server.GetFavList"
 )
 
 // Server struct contains a reference to the handler. Used to start the grpc server.

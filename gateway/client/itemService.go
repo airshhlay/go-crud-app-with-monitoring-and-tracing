@@ -15,9 +15,9 @@ import (
 )
 
 const (
-	addFavClient     = "gateway.AddFavClient"
-	deleteFavClient  = "gateway.DeleteFavClient"
-	getFavListClient = "gateway.GetFavListClient"
+	addFavClient     = "ItemServiceClient.AddFav"
+	deleteFavClient  = "ItemServiceClient.DeleteFavClient"
+	getFavListClient = "ItemServiceClient.GetFavListClient"
 )
 
 // ItemServiceClient serves as a wrapper for the grpc client to the item service grpc server
@@ -67,7 +67,7 @@ func (i *ItemServiceClient) StartClient(opts []grpc.DialOption) error {
 // AddFav calls the item service's method with the defined AddFavReq
 func (i *ItemServiceClient) AddFav(ctx context.Context, req *proto.AddFavReq) (*proto.AddFavRes, error) {
 	// start span from context
-	span, ctx := ot.StartSpanFromContext(ctx, signupClient)
+	span, ctx := ot.StartSpanFromContext(ctx, addFavClient)
 	i.addSpanTags(span)
 	defer span.Finish()
 
@@ -77,7 +77,7 @@ func (i *ItemServiceClient) AddFav(ctx context.Context, req *proto.AddFavReq) (*
 // DeleteFav calls the item service's method with the defined DeleteFavReq
 func (i *ItemServiceClient) DeleteFav(ctx context.Context, req *proto.DeleteFavReq) (*proto.DeleteFavRes, error) {
 	// start span from context
-	span, ctx := ot.StartSpanFromContext(ctx, signupClient)
+	span, ctx := ot.StartSpanFromContext(ctx, deleteFavClient)
 	i.addSpanTags(span)
 	defer span.Finish()
 
@@ -87,7 +87,7 @@ func (i *ItemServiceClient) DeleteFav(ctx context.Context, req *proto.DeleteFavR
 // GetFavList calls the item service's method with the defined GetFavList
 func (i *ItemServiceClient) GetFavList(ctx context.Context, req *proto.GetFavListReq) (*proto.GetFavListRes, error) {
 	// start span from context
-	span, ctx := ot.StartSpanFromContext(ctx, signupClient)
+	span, ctx := ot.StartSpanFromContext(ctx, getFavListClient)
 	i.addSpanTags(span)
 	defer span.Finish()
 

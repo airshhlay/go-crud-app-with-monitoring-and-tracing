@@ -17,10 +17,10 @@ import (
 )
 
 const (
-	mysqlInsertRow = "databaseManager.InsertRow"
-	mysqlQueryOne  = "databaseManager.QueryOne"
-	mysqlQueryRows = "databaseManager.QueryRows"
-	mysqlDeleteOne = "databaseManager.DeleteOne"
+	insertRow = "db.InsertRow"
+	queryOne  = "db.QueryOne"
+	queryRows = "db.QueryRows"
+	deleteOne = "db.DeleteOne"
 )
 
 // DatabaseManager is a database manager struct containing a reference to the database connection, zap logger, and the database config
@@ -76,7 +76,7 @@ func InitDatabase(dbConfig *config.DbConfig, logger *zap.Logger) (*DatabaseManag
 // QueryOne will query for a single *sql.Row, and write its contents into destination.
 func (dm *DatabaseManager) QueryOne(ctx context.Context, query string, opName string, destination ...any) error {
 	// start tracing span from context
-	span, ctx := ot.StartSpanFromContext(ctx, mysqlQueryOne)
+	span, ctx := ot.StartSpanFromContext(ctx, queryOne)
 	dm.addSpanTags(span, query)
 	defer span.Finish()
 	successStr := constants.True
@@ -114,7 +114,7 @@ func (dm *DatabaseManager) QueryOne(ctx context.Context, query string, opName st
 // QueryRows executes the given query and returns the queried rows.
 func (dm *DatabaseManager) QueryRows(ctx context.Context, query string, opName string) (*sql.Rows, error) {
 	// start tracing span from context
-	span, ctx := ot.StartSpanFromContext(ctx, mysqlQueryRows)
+	span, ctx := ot.StartSpanFromContext(ctx, queryRows)
 	dm.addSpanTags(span, query)
 	defer span.Finish()
 	successStr := constants.True
@@ -138,7 +138,7 @@ func (dm *DatabaseManager) QueryRows(ctx context.Context, query string, opName s
 // InsertRow will insert a single row and return its ID.
 func (dm *DatabaseManager) InsertRow(ctx context.Context, query string, opName string) (int64, error) {
 	// start tracing span from context
-	span, ctx := ot.StartSpanFromContext(ctx, mysqlInsertRow)
+	span, ctx := ot.StartSpanFromContext(ctx, insertRow)
 	dm.addSpanTags(span, query)
 	defer span.Finish()
 	successStr := constants.True
@@ -182,7 +182,7 @@ func (dm *DatabaseManager) InsertRow(ctx context.Context, query string, opName s
 // DeleteOne deletes a row from the database and returns the number of rows deleted
 func (dm *DatabaseManager) DeleteOne(ctx context.Context, query string, opName string) (int64, error) {
 	// start tracing span from context
-	span, ctx := ot.StartSpanFromContext(ctx, mysqlDeleteOne)
+	span, ctx := ot.StartSpanFromContext(ctx, deleteOne)
 	dm.addSpanTags(span, query)
 	defer span.Finish()
 	successStr := constants.True
@@ -221,5 +221,5 @@ func (dm *DatabaseManager) addSpanTags(span ot.Span, statement string) {
 	span.SetTag(tracing.DatabaseInstance, dm.config.DbName)
 	span.SetTag(tracing.DatabaseUser, dm.config.User)
 	span.SetTag(tracing.DatabaseStatement, statement)
-	span.SetTag(tracing.Component, tracing.ComponentDB)
+	span.SetTag(tracing.Component, tracing.ComponentMySQL)
 }

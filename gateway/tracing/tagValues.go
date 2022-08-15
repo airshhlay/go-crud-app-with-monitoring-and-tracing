@@ -7,7 +7,7 @@ const (
 	// Component values
 
 	// ComponentGrpc for <component>
-	ComponentGrpc = "grpc"
+	ComponentGrpc = "gRPC"
 
 	// PeerServiceUserService for <peer.service>
 	PeerServiceUserService = "userservice"

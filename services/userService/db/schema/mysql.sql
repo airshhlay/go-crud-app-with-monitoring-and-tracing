@@ -1,3 +1,8 @@
+CREATE DATABASE IF NOT EXISTS userservicedb;
+
+CREATE USER IF NOT EXISTS 'entrytask'@'localhost' IDENTIFIED BY 'password';
+GRANT CREATE, ALTER, DROP, INSERT, UPDATE, DELETE, SELECT, REFERENCES, RELOAD on userservicedb.* TO 'entrytask'@'localhost';
+
 CREATE USER IF NOT EXISTS 'exporter'@'%' IDENTIFIED BY 'exporterpassword' WITH MAX_USER_CONNECTIONS 3;
 GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'exporter'@'%';
 

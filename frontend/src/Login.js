@@ -33,6 +33,8 @@ export default function Login(props) {
               return setErrorMessage("Wrong username and/or password.")
             case 240012:
               return setErrorMessage("Wrong username and/or password.")
+            case 240013:
+              return setErrorMessage("Wrong username and/or password.")
             default:
               return setErrorMessage("Unexpected error occured. Please try again later!")
           }

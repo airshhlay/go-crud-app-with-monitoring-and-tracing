@@ -11,12 +11,15 @@ const (
 
 	// ComponentServer for <component>
 	ComponentServer = "itemService.server"
-	// ComponentDB for <component>
-	ComponentDB = "itemService.db"
-	// ComponentExternal for <component>
-	ComponentExternal = "itemService.external"
+	// ComponentMySQL for <component>
+	ComponentMySQL = "mysql"
 
-	// PeerServiceUserService for <peer.service>
+	// ComponentRedis for <component>
+	ComponentRedis = "redis"
+	// ComponentHTTP for <component>
+	ComponentHTTP = "http"
+
+	// PeerServiceMySQL for <peer.service>
 	PeerServiceMySQL = "mysql"
 	// PeerServiceRedis for <peer.service>
 	PeerServiceRedis = "redis"

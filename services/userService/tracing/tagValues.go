@@ -7,12 +7,12 @@ const (
 	// DatabaseTypeSQL for <db.type>
 	DatabaseTypeSQL = "sql"
 
-	// ComponentServer for <component>
-	ComponentServer = "userService.server"
-	// ComponentDB for <component>
-	ComponentDB = "userService.db"
+	// ComponentGrpc for <component>
+	ComponentGrpc = "gRPC"
+	// ComponentMySQL for <component>
+	ComponentMySQL = "mysql"
 
-	// PeerServiceUserService for <peer.service>
+	// PeerServiceMySQL for <peer.service>
 	PeerServiceMySQL = "mysql"
 
 	// Span kind

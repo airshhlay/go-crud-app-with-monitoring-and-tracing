@@ -1,5 +1,6 @@
 import axios from "axios";
-const endpoint = process.env.NODE_ENV === "development" ? process.env.REACT_APP_ENDPOINT_LOCAL : process.env.REACT_APP_ENDPOINT_PROD;
+const endpoint = process.env.REACT_APP_ENDPOINT
+// process.env.NODE_ENV === "development" ? process.env.REACT_APP_ENDPOINT_LOCAL : process.env.REACT_APP_ENDPOINT_PROD;
 const GET_LIST = process.env.REACT_APP_GET_LIST ? process.env.REACT_APP_GET_LIST : "/api/item/get/list"
 const ADD_ITEM = process.env.REACT_APP_ADD_ITEM ? process.env.REACT_APP_ADD_ITEM : "/api/item/add/fav"
 const DELETE_ITEM = process.env.REACT_APP_DELETE_ITEM ? process.env.REACT_APP_DELETE_ITEM : "/api/item/delete/fav"

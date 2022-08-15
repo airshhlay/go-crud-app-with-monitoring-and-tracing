@@ -1,11 +1,21 @@
 import React from "react";
-import { message, Card, Button, Row, Col, Input, Form } from "antd";
+import { Button, Row, Col, Input, Form } from "antd";
 import { WarningOutlined } from "@ant-design/icons";
 import { signup } from "./api/auth";
 export default function Signup(props) {
   const [errorMessage, setErrorMessage] = React.useState("")
 
   const onFinish = (values) => {
+    var username = values.username
+    var password = values.password
+    if (!username || !password) {
+      return setErrorMessage("Username and/or password can not be blank.")
+    }
+    if (username.length > 15 || username.length < 3) {
+      return setErrorMessage("Username must be 3 to 15s characters long!")
+    } else if (password.length < 8 || password.length > 20) {
+      return setErrorMessage("Password should be 8 to 20 characters long!")
+    }
     signup(values.username, values.password)
       .then((res) => {
         if (!res.errorCode) {
@@ -29,29 +39,6 @@ export default function Signup(props) {
         setErrorMessage("Unexpected error occured. Please try again later!")
       });
   };
-
-
-  // const handleSignup = () => {
-  //   if (!username || username.length > 8 || username.length < 3) {
-  //     showFailureMsg('Username must be 3 to 8 characters long');
-  //     return;
-  //   }
-  //   if (!password || password.length < 8 || password.length >= 15) {
-  //     showFailureMsg('Password must be 8 to 15 characters long');
-  //     return;
-  //   }
-  //   signup(username, password)
-  //     .then(() => {
-  //       showSuccessMsg("Signup successful. You can now login.")
-  //       setUsername(null);
-  //       setPassword(null);
-  //     })
-  //     .catch((err) => {
-  //       if (err.response) {
-  //         showFailureMsg(err.response.data.errorMsg);
-  //       }
-  //     });
-  // };
 
   return (
     <Row type="flex" justify="center" align="middle" style={{

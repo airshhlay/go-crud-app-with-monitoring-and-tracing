@@ -61,4 +61,6 @@ const (
 	Get = "GET"
 	// Set string
 	Set = "SET"
+	// Endpoint string
+	Endpoint = "endpoint"
 )

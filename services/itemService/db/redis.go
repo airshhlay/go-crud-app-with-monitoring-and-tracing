@@ -155,5 +155,5 @@ func (rm *RedisManager) addSpanTags(span ot.Span, statement string) {
 	span.SetTag(tracing.DatabaseInstance, rm.config.Db)
 	span.SetTag(tracing.DatabaseUser, rm.config.Host)
 	span.SetTag(tracing.DatabaseStatement, statement)
-	span.SetTag(tracing.Component, tracing.ComponentDB)
+	span.SetTag(tracing.Component, tracing.ComponentRedis)
 }
