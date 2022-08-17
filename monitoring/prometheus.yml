@@ -42,7 +42,7 @@ scrape_configs:
     static_configs:
       - targets:
         - 'docker.for.mac.host.internal:7001'
-  - job_name: 'node-exporter'
+  - job_name: 'node'
     honor_timestamps: true
     scrape_interval: 15s
     scrape_timeout: 10s
