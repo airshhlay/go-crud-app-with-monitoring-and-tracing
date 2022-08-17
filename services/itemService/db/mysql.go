@@ -120,7 +120,7 @@ func (dm *DatabaseManager) QueryRows(ctx context.Context, query string, opName s
 	successStr := constants.True
 	// time database query
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-		metrics.DatabaseOpDuration.WithLabelValues(dm.config.ServiceLabel, constants.Insert, opName, successStr).Observe(v)
+		metrics.DatabaseOpDuration.WithLabelValues(dm.config.ServiceLabel, constants.Select, opName, successStr).Observe(v)
 	}))
 	defer func() {
 		// observe duration at the end of this function

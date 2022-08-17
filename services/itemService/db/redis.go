@@ -75,7 +75,7 @@ func (rm *RedisManager) Set(ctx context.Context, key string, bytes []byte, exp t
 	successStr := constants.True
 	// time redis op
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-		metrics.RedisOpDuration.WithLabelValues(rm.config.ServiceLabel, constants.Get, successStr).Observe(v)
+		metrics.RedisOpDuration.WithLabelValues(rm.config.ServiceLabel, constants.Set, successStr).Observe(v)
 	}))
 	defer func() {
 		timer.ObserveDuration()
