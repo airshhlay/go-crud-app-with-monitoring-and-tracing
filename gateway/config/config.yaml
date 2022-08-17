@@ -2,16 +2,16 @@ hostname: localhost
 port: 5000
 ginMode: debug
 trustedProxies:
-  - http://docker.for.mac.host.internal:80
+  # - http://docker.for.mac.host.internal:80
+  - http://app:80
 allowedOrigins:
-  - http://docker.for.mac.host.internal:80
+  # - http://docker.for.mac.host.internal:80
+  - http://app:80
 
 # config for incoming requests
 http:
   userService:
     label: userservice
-    host: localhost
-    port: 6000
     secret: zhtq0eMHQpyQSZKV2ILyk2gXphHkMeCbBKNu5Xa5yhLHJwEahhcBWKP9to5WXRF
     expiry: 30 # expiry time for auth cookie in minutes
     urlGroup: /api/user
@@ -25,8 +25,6 @@ http:
     
   itemService:
     label: itemservice
-    host: localhost
-    port: 7000
     urlGroup: /api/item
     apis:
       addFav:
