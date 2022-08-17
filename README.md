@@ -21,6 +21,10 @@ Development: 03 Aug 2022 - 15 Aug 2022
 - Grafana: Pulls data from Prometheus for visualization
 - Jaeger: Collects and displays traces created by the services
 
+**Load Testing**
+- k6: Executes scripts that call the various endpoints
+- influxdb: Stores the load testing results from k6 and used as a datasource for Grafana
+
 ## Setup
 
 ### Prerequisites
@@ -34,11 +38,17 @@ Development: 03 Aug 2022 - 15 Aug 2022
 2. Run the command `source <ABSOLUTE PATH TO ROOT FOLDER OF PROJECT>/services/userService/db/schema/mysql.sql` to create the `userservicedb` and the necessary tables.
 3. Run the command `source <ABSOLUTE PATH TO ROOT FOLDER OF PROJECT>/services/itemService/db/schema/mysql.sql` to create the `itemservicedb` and the necessary tables.
 
-### Starting Docker
+### Running the services
 1. Ensure you are at the root folder of the project.
 2. Run the command `docker-compose build` to create and build the necessary images
 3. Run `docker-compose up` to start the containers
 4. Enter `localhost:80` or `localhost` in your browser. You should now be able to see the web application.
+
+### Running monitoring
+1. Open a separate terminal window in the root folder of the project and `cd` into the monitoring folder with `cd monitoring`
+2. Run `docker-compose up` to start Prometheus, Grafana, Jaeger and InfluxDB
+3. Run the load testing script with `docker-compose run k6 run /scripts/script.js --vus <number of virtual users> --duration <duration to run the script>`, or to run with a default of 10 VUs, just use the command ``docker-compose run k6 run /scripts/script.js` 
+4. You can now view the various UIs below.
 
 ### Using the web app
 1. In order to use Shopee Favourites, you will have to first create an account. Click on signup and enter a username and password.
@@ -47,8 +57,10 @@ Development: 03 Aug 2022 - 15 Aug 2022
 4. Go to `shopee.sg` and copy/paste a link from any item you like into the input field at the top of the page.
 5. If you provided a valid link, you will now see your item added to your list, along with its price! :)
 
-## Viewing the UI
+## Viewing the UIs
 Jaeger UI: `localhost:16886`\
 Grafana UI: `localhost:3000`
 
-To import the Grafana dashboard, click on `Dashboards > Import` in Grafana and copy and paste the contents of `grafana-shopee-favourites.json` 
+The dashboards for Shopee Favourites and K6 will be automatically imported and inside the Grafana UI. Alternatively, you can import the dashboards directly by going to the `monitoring/dashboards` folder and copy-pasting the contents after clicking `Dashboards > Import` in the Grafana UI.\
+Import the Node Exporter dashboard with ID: `1860`\
+Import the MySQL Exporter dashboard with ID: `14057`

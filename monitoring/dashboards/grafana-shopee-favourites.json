@@ -120,7 +120,7 @@
             "uid": "P1809F7CD0C75ACF3"
           },
           "editorMode": "builder",
-          "expr": "sum by(grpc_method) (rate(grpc_server_handled_total{job=\"$Service\"}[5m]))",
+          "expr": "sum by(grpc_method) (increase(grpc_server_handled_total{job=\"$Service\"}[$__rate_interval]))",
           "legendFormat": "{{grpc_method}}",
           "range": true,
           "refId": "A"
@@ -1167,7 +1167,7 @@
             "uid": "P1809F7CD0C75ACF3"
           },
           "editorMode": "builder",
-          "expr": "rate(http_requests_total{job=\"gateway-metrics\"}[5m])",
+          "expr": "increase(http_requests_total{job=\"gateway-metrics\"}[$__rate_interval])",
           "legendFormat": "{{path}}",
           "range": true,
           "refId": "A"
@@ -1287,7 +1287,7 @@
           "type": "math"
         }
       ],
-      "title": "Rate of Error Codes Returned",
+      "title": "Average Number of Error Codes Returned Per Second",
       "type": "timeseries"
     },
     {
@@ -1571,7 +1571,7 @@
     "list": [
       {
         "current": {
-          "selected": false,
+          "selected": true,
           "text": "itemservice-metrics",
           "value": "itemservice-metrics"
         },
@@ -1606,6 +1606,6 @@
   "timezone": "",
   "title": "Shopee Favourites",
   "uid": "LqSFBHiVz",
-  "version": 4,
+  "version": 5,
   "weekStart": ""
 }
