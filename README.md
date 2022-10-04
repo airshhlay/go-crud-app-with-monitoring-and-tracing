@@ -1,6 +1,5 @@
 # Shopee Favourites
-## Introduction
-An entry task for MTS Service Governance.
+A favouriting system for the Shopee web page.
 
 **Timeline**\
 Design: 01 Aug 2022 - 02 Aug 2022\
